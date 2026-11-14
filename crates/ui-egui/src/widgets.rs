@@ -116,6 +116,27 @@ pub fn menu_item(ui: &mut Ui, selected: bool, text: impl Into<String>) -> Respon
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
+/// One of a list of things to do with what is shown (a panel's actions): an icon and a label on
+/// a row as wide as the list, with a soft fill under the pointer. `danger` letters it in the
+/// danger colour, for the one that deletes.
+pub fn action_row(ui: &mut Ui, icon: &str, label: &str, danger: bool) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let size = ControlSize::Medium;
+    let galley = ui.painter().layout_no_wrap(tr(label), egui::FontId::proportional(size.text()), t.text);
+    let wanted = galley.size().x + size.icon() + theme::space::SM * 3.0;
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(wanted.max(ui.available_width()), size.height()), Sense::click());
+    let h = hover_t(ui, &resp);
+    let fill = if resp.is_pointer_button_down_on() { t.pressed } else { theme::mix(Color32::TRANSPARENT, t.hover, h) };
+    ui.painter().rect_filled(rect, t.radius_sm, fill);
+    let ink = if danger { t.danger } else { theme::mix(t.text_dim, t.text, h) };
+    let at = egui::Rect::from_min_size(egui::pos2(rect.left() + theme::space::SM, rect.center().y - size.icon() / 2.0), Vec2::splat(size.icon()));
+    icons::paint(ui, at, icon, size.icon(), if danger { t.danger } else { theme::mix(t.icon, t.text, h) });
+    ui.painter().galley_with_override_text_color(egui::pos2(at.right() + theme::space::SM, rect.center().y - galley.size().y / 2.0), galley, ink);
+    focus_ring(ui, &resp, rect);
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tr(label)));
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
 /// A [`menu_item`] that sets `current` to `value` when picked. True when that changed it.
 pub fn menu_choice<V: PartialEq>(ui: &mut Ui, current: &mut V, value: V, text: impl Into<String>) -> bool {
     let on = *current == value;
@@ -282,12 +303,19 @@ pub struct Button<'a> {
     icon: Option<&'a str>,
     label: &'a str,
     enabled: bool,
+    wide: bool,
 }
 
 impl<'a> Button<'a> {
     /// `label` is translated here.
     pub fn new(kind: ButtonKind, label: &'a str) -> Self {
-        Self { kind, size: ControlSize::Medium, icon: None, label, enabled: true }
+        Self { kind, size: ControlSize::Medium, icon: None, label, enabled: true, wide: false }
+    }
+
+    /// As wide as the room it has (the one action of a narrow panel).
+    pub fn wide(mut self) -> Self {
+        self.wide = true;
+        self
     }
 
     pub fn icon(mut self, icon: Option<&'a str>) -> Self {
@@ -308,12 +336,13 @@ impl<'a> Button<'a> {
 
 impl egui::Widget for Button<'_> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let Button { kind, size, icon, label, enabled } = self;
+        let Button { kind, size, icon, label, enabled, wide } = self;
         let t = Tokens::get(ui.ctx());
         let galley = label_galley(ui, &tr(label), size.text(), t.text);
         let icon_w = if icon.is_some() { size.icon() + ICON_GAP } else { 0.0 };
         // Taller than its size only when the label is (a zoomed or fallback font).
         let wanted = Vec2::new(galley.size().x + icon_w + size.pad_x() * 2.0, (galley.size().y + theme::space::SM).max(size.height()));
+        let wanted = if wide { Vec2::new(wanted.x.max(ui.available_width()), wanted.y) } else { wanted };
         let (rect, resp) = ui.allocate_exact_size(wanted, if enabled { Sense::click() } else { Sense::hover() });
         let h = if enabled { hover_t(ui, &resp) } else { 0.0 };
         let down = enabled && resp.is_pointer_button_down_on();
@@ -410,7 +439,7 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
     let (rect, _) = ui.allocate_exact_size(Vec2::new(total, height), Sense::hover());
     // A sunken track; the chosen segment is a lighter card on it.
     ui.painter().rect(rect, t.radius, t.canvas, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
-    // The segments, and a soft fill under the pointer on the ones that aren't chosen.
+    // The segments. One under the pointer only brightens its words: the card is what moves.
     let mut x = rect.left() + pad;
     let mut segments = Vec::with_capacity(options.len());
     for (i, w) in widths.iter().enumerate() {
@@ -419,13 +448,10 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
         let resp = ui.interact(seg, ui.id().with(("seg", name)), Sense::click());
         let on = i == selected;
         resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, on, tr(name)));
-        if !on {
-            ui.painter().rect_filled(seg, t.radius_sm, theme::mix(Color32::TRANSPARENT, t.hover, hover_t(ui, &resp)));
-        }
         segments.push((seg, resp));
         x += w;
     }
-    // The card slides to the chosen segment, over those fills (measured from the switch's own
+    // The card slides to the chosen segment (measured from the switch's own
     // left edge, so moving the whole switch doesn't set it off). Named by its options, not by
     // where it is drawn, so it keeps its place when the screen around it changes.
     let before: f32 = widths.iter().take(selected).sum();
@@ -436,7 +462,8 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
     let mut picked = None;
     for (i, ((seg, resp), g)) in segments.into_iter().zip(galleys).enumerate() {
         let on = i == selected;
-        ui.painter().galley_with_override_text_color(seg.center() - g.size() / 2.0, g, if on { t.text } else { t.text_dim });
+        let ink = if on { t.text } else { theme::mix(t.text_dim, t.text, hover_t(ui, &resp)) };
+        ui.painter().galley_with_override_text_color(seg.center() - g.size() / 2.0, g, ink);
         focus_ring(ui, &resp, seg);
         let resp = if on { resp } else { resp.on_hover_cursor(egui::CursorIcon::PointingHand) };
         if resp.clicked() && !on {

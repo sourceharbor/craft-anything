@@ -87,14 +87,18 @@ pub fn menu(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
 }
 
 /// The same, as quiet links on the project's page.
-pub fn buttons(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
-    if widgets::secondary(ui, None, "Rename").clicked() {
+pub fn rows(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
+    if widgets::action_row(ui, "file", "Rename", false).clicked() {
         ask_rename(app, ws);
     }
-    if widgets::secondary(ui, Some("copy"), "Duplicate").on_hover_text(tr("A copy to try something else from here.")).clicked() {
+    if widgets::action_row(ui, "copy", "Duplicate", false).on_hover_text(tr("A copy to try something else from here.")).clicked() {
         app.duplicate_project(&ws.root);
     }
-    if !app.runs.is_busy(&ws.root) && icons::button(ui, "trash-2", theme::ControlSize::Medium, false, "Delete the project").clicked() {
+}
+
+/// The row that deletes the project: last in its list, and not there while it builds.
+pub fn delete_row(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
+    if !app.runs.is_busy(&ws.root) && widgets::action_row(ui, "trash-2", "Delete the project", true).clicked() {
         app.state.modal = Some(Modal::Delete(ws.root.clone()));
     }
 }

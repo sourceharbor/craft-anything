@@ -854,11 +854,10 @@ fn asset_line(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
         return;
     }
     widgets::caption(ui, "Generated assets");
-    ui.add_space(theme::space::XS);
+    ui.add_space(theme::space::SM);
     crate::engine_ui::assets_toggle(app, ui, ws.manifest.generate_assets);
     let (n, spent) = app.facts.assets;
     if !ws.manifest.generate_assets && n == 0 {
-        ui.add_space(theme::space::MD);
         return;
     }
     ui.add_space(theme::space::SM);
@@ -869,7 +868,6 @@ fn asset_line(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
     if widgets::link(ui, &trf("Raise the budget by {amount}", &[("amount", &step)])).clicked() {
         app.raise_asset_budget();
     }
-    ui.add_space(theme::space::MD);
 }
 
 /// Which step is current, from the feed and the project's status, and whether it's being worked
@@ -948,67 +946,82 @@ fn side(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
     let t = Tokens::get(ui.ctx());
     ui.add_space(theme::space::MD);
     let m = &ws.manifest;
-    widgets::card(&t).show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        ui.horizontal(|ui| {
-            let (rect, _) = ui.allocate_exact_size(Vec2::splat(48.0), egui::Sense::hover());
-            ui.painter().rect_filled(rect, t.radius, t.accent_soft);
-            icons::paint(ui, rect, make::project_icon(m), theme::icon::XL, t.accent_ink);
-            ui.vertical(|ui| {
-                ui.add(egui::Label::new(theme::heading(&m.name, theme::CARD)).truncate());
-                let (label, fg, bg) = make::status_shown(app, ws, &t);
-                widgets::pill(ui, label, fg, bg);
-            });
+    // What it is: its mark, its name and how it stands, then where it came from.
+    ui.horizontal(|ui| {
+        let (rect, _) = ui.allocate_exact_size(Vec2::splat(theme::ControlSize::Large.height()), egui::Sense::hover());
+        ui.painter().rect_filled(rect, t.radius, t.accent_soft);
+        icons::paint(ui, rect, make::project_icon(m), theme::icon::LG, t.accent_ink);
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = theme::space::XS;
+            ui.add(egui::Label::new(theme::heading(&m.name, theme::CARD)).truncate());
+            let (label, fg, bg) = make::status_shown(app, ws, &t);
+            widgets::pill(ui, label, fg, bg);
         });
-        ui.add_space(theme::space::MD);
-        if !matches!(m.target, TargetRef::None) {
-            widgets::caption(ui, "From");
-            ui.add(egui::Label::new(RichText::new(m.target.label()).color(t.text_dim)).truncate());
-            ui.add_space(theme::space::SM);
-        }
-        if !m.stack.is_empty() && !app.beginner() {
-            widgets::caption(ui, "Built with");
-            ui.label(RichText::new(&m.stack).color(t.text_dim));
-        }
     });
+    if !matches!(m.target, TargetRef::None) {
+        ui.add_space(theme::space::MD);
+        widgets::caption(ui, "From");
+        ui.add(egui::Label::new(RichText::new(m.target.label()).color(t.text_dim)).truncate());
+    }
+    if !m.stack.is_empty() && !app.beginner() {
+        ui.add_space(theme::space::SM);
+        widgets::caption(ui, "Built with");
+        ui.label(RichText::new(&m.stack).color(t.text_dim));
+    }
+    // The one thing to do with it, as wide as the panel.
+    if outcome(app).is_some() {
+        ui.add_space(theme::space::LG);
+        outcome_button(app, ui, ws, theme::ControlSize::Medium, true);
+    }
     ui.add_space(theme::space::LG);
     steps(app, ui, ws);
     ui.add_space(theme::space::LG);
     open_questions(app, ui);
-    asset_line(app, ui, ws);
-    if outcome(app).is_some() {
-        outcome_button(app, ui, ws, theme::ControlSize::Medium);
-        ui.add_space(theme::space::SM);
+    if craft_anything_engines::game::Builder::from_stack(&m.stack).is_some() {
+        widgets::card(&t).inner_margin(theme::pad::ROW).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            asset_line(app, ui, ws);
+        });
+        ui.add_space(theme::space::LG);
     }
-    // Pictures of the original: the look the builder matches (websites are photographed for it).
-    if !matches!(m.target, TargetRef::Website { .. }) {
-        let n = app.facts.references;
-        if widgets::secondary(ui, Some("paperclip"), "Add pictures of the original")
-            .on_hover_text(tr("Screenshots of how it should look. The builder opens each one and matches it."))
-            .clicked()
-        {
-            app.pick(crate::Pick::Pictures);
+    // Everything else there is to do with it: one list, one row each.
+    widgets::card(&t).inner_margin(theme::pad::TIGHT).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.spacing_mut().item_spacing.y = theme::space::XXS;
+        // Pictures of the original: the look the builder matches (websites are photographed for it).
+        if !matches!(m.target, TargetRef::Website { .. }) {
+            let n = app.facts.references;
+            let note = if n == 0 { tr("None yet. Screenshots help it look right.") } else { trf("{n} picture(s) to match.", &[("n", &n.to_string())]) };
+            if widgets::action_row(ui, "paperclip", "Add pictures of the original", false)
+                .on_hover_text(tr("Screenshots of how it should look. The builder opens each one and matches it."))
+                .clicked()
+            {
+                app.pick(crate::Pick::Pictures);
+            }
+            // Under its row, in line with the row's words.
+            ui.horizontal(|ui| {
+                ui.add_space(theme::space::SM + theme::ControlSize::Medium.icon());
+                ui.add(egui::Label::new(RichText::new(note).color(t.text_faint).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION)))).wrap());
+            });
+            ui.add_space(theme::space::XS);
         }
-        let note = if n == 0 { tr("None yet. Screenshots help it look right.") } else { trf("{n} picture(s) to match.", &[("n", &n.to_string())]) };
-        ui.label(RichText::new(note).color(Tokens::get(ui.ctx()).text_dim).size(theme::SMALL));
-        ui.add_space(theme::space::SM);
-    }
-    ui.horizontal_wrapped(|ui| {
-        if widgets::secondary(ui, Some("folder-open"), "Open folder").clicked() {
+        if widgets::action_row(ui, "folder-open", "Open folder", false).clicked() {
             open_folder(app, ws);
         }
         if matches!(outcome(app), Some(Outcome::Program))
-            && widgets::secondary(ui, Some("pin"), "Pin this build").on_hover_text(tr("Keep this version in the sidebar to open any time.")).clicked()
+            && widgets::action_row(ui, "pin", "Pin this build", false).on_hover_text(tr("Keep this version in the sidebar to open any time.")).clicked()
         {
             app.ask_pin(&ws.root);
         }
-        crate::manage::buttons(app, ui, ws);
+        crate::manage::rows(app, ui, ws);
         if !app.beginner()
-            && widgets::secondary(ui, Some("microscope"), "Open in the workbench").on_hover_text(tr("The full toolset, evidence and logs.")).clicked()
+            && widgets::action_row(ui, "microscope", "Open in the workbench", false).on_hover_text(tr("The full toolset, evidence and logs.")).clicked()
         {
             app.state.screen = Screen::Workbench;
         }
+        crate::manage::delete_row(app, ui, ws);
     });
+    ui.add_space(theme::space::LG);
 }
 
 /// How to see what was made: open the built site, or start the built program.
@@ -1033,10 +1046,11 @@ fn outcome_words(kinds: &KindRegistry, ws: &Workspace) -> KindWords {
 }
 
 /// The button that shows the result ("Play the game"); a program starts only on this click.
-fn outcome_button(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace, size: theme::ControlSize) {
+fn outcome_button(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace, size: theme::ControlSize, wide: bool) {
     let Some(o) = outcome(app) else { return };
     let w = outcome_words(&app.kinds, ws);
-    if ui.add(widgets::Button::new(widgets::ButtonKind::Primary, w.button).icon(Some(w.icon)).size(size)).clicked() {
+    let button = widgets::Button::new(widgets::ButtonKind::Primary, w.button).icon(Some(w.icon)).size(size);
+    if ui.add(if wide { button.wide() } else { button }).clicked() {
         match o {
             Outcome::Site => app.open_preview(&ui.ctx().clone()),
             Outcome::Program => app.play(ws),
@@ -1226,7 +1240,7 @@ fn feed(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace, waiting: &[Note]) {
                     ui.label(theme::heading(tr(w.ready), theme::CARD));
                     ui.label(RichText::new(tr("Try it out, then ask below for any changes.")).color(t.text_dim));
                 });
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| outcome_button(app, ui, ws, theme::ControlSize::Large));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| outcome_button(app, ui, ws, theme::ControlSize::Large, false));
             });
         });
         ui.add_space(theme::space::MD);

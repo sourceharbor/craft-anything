@@ -65,17 +65,22 @@ pub fn edge_at(ctx: &egui::Context) -> Option<ResizeDirection> {
 }
 
 /// A 1 px edge around the window (the native frame is off), so it doesn't melt into the desktop.
+/// Windows draws a line of its own along the top of a window without a frame; a second one from
+/// us made the top edge twice as thick as the others, so there the top is left to it.
 pub fn window_edge(ctx: &egui::Context) {
     if NATIVE_FRAME || maximized(ctx) {
         return;
     }
     let t = Tokens::get(ctx);
-    ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("window-edge"))).rect_stroke(
-        ctx.content_rect(),
-        0.0,
-        egui::Stroke::new(1.0, t.field_border),
-        egui::StrokeKind::Inside,
-    );
+    let painter = ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground, egui::Id::new("window-edge")));
+    let stroke = egui::Stroke::new(1.0, t.card_border);
+    let r = ctx.content_rect().shrink(0.5);
+    if !cfg!(windows) {
+        painter.hline(r.x_range(), r.top(), stroke);
+    }
+    painter.hline(r.x_range(), r.bottom(), stroke);
+    painter.vline(r.left(), r.y_range(), stroke);
+    painter.vline(r.right(), r.y_range(), stroke);
 }
 
 /// Resizing from the window edges (the native frame is off, so we provide it).

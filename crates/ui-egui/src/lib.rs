@@ -809,6 +809,16 @@ impl CraftApp {
                 self.toast_at.remove(i);
             }
         }
+        // A confirmation takes the place of the one before it: two in a row (a switch flipped
+        // and flipped back) would only pile up over the screen.
+        if !error {
+            while let Some(i) = self.state.toasts.iter().position(|(_, e)| !e) {
+                self.state.toasts.remove(i);
+                if i < self.toast_at.len() {
+                    self.toast_at.remove(i);
+                }
+            }
+        }
         self.state.toasts.push((text, error));
         self.toast_at.push(Instant::now());
         // The oldest confirmations go first when there are too many; errors are kept longest.
@@ -2011,36 +2021,51 @@ impl CraftApp {
             return;
         }
         let t = theme::Tokens::get(ctx);
-        // Narrow, in the top right corner under the title bar: at the bottom they sat on the
-        // prompt box's switches, the very controls that had just been pressed.
-        let width = (ctx.content_rect().width() - 32.0).clamp(200.0, 380.0);
+        // In the middle of the title bar, the one place with nothing to press: at the bottom they
+        // sat on the prompt box's switches (the very controls just pressed), in a corner on a
+        // side panel, under the bar on a screen's tabs. One line fits inside the bar; a longer
+        // message grows down from it.
+        let width = (ctx.content_rect().width() - 2.0 * theme::space::LG).clamp(200.0, 520.0);
         let mut dismiss = None;
         egui::Area::new(egui::Id::new("toasts"))
             .order(egui::Order::Foreground)
-            .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-theme::space::LG, titlebar::HEIGHT + theme::space::MD))
+            .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, theme::space::XS))
+            .fade_in(true)
             .show(ctx, |ui| {
                 ui.set_width(width);
+                ui.spacing_mut().item_spacing = egui::vec2(theme::space::SM, theme::space::XS);
+                // The mark and the close button are boxes of one size, and the words between
+                // them sit on that box's middle line: the same room on every side, however many
+                // lines the message takes.
+                let side = theme::ControlSize::Small.height();
+                let line = theme::leading(theme::SMALL);
+                let nudge = ((side - line) / 2.0).max(0.0);
+                let inner = width - 2.0 * theme::space::SM - 2.0;
                 for (i, (text, error)) in self.state.toasts.iter().enumerate() {
                     egui::Frame::new()
-                        .fill(t.raised)
-                        .stroke(egui::Stroke::new(1.0, if *error { t.danger.gamma_multiply(0.6) } else { t.card_border }))
+                        .fill(t.field)
+                        .stroke(egui::Stroke::new(1.0, t.card_border))
                         .corner_radius(t.r_lg())
-                        .shadow(egui::Shadow { offset: [0, 4], blur: 16, spread: 0, color: t.shadow })
-                        .inner_margin(theme::pad::BAR)
+                        .shadow(egui::Shadow { offset: [0, 8], blur: 24, spread: 0, color: t.shadow })
+                        .inner_margin(theme::pad::CHIP)
                         .show(ui, |ui| {
-                            ui.set_width(width - 28.0);
-                            ui.horizontal(|ui| {
+                            ui.set_width(inner);
+                            ui.horizontal_top(|ui| {
                                 let (icon, col) = if *error { ("triangle-alert", t.danger) } else { ("check", t.success) };
-                                icons::show(ui, icon, crate::theme::icon::MD, col);
-                                ui.add(egui::Label::new(egui::RichText::new(text).color(if *error { t.text } else { t.text_dim })).wrap());
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if icons::button(ui, "x", crate::theme::ControlSize::Medium, false, "Dismiss").clicked() {
-                                        dismiss = Some(i);
-                                    }
+                                let (mark, _) = ui.allocate_exact_size(egui::Vec2::splat(side), egui::Sense::hover());
+                                icons::paint(ui, mark, icon, theme::icon::MD, col);
+                                ui.vertical(|ui| {
+                                    ui.spacing_mut().item_spacing.y = 0.0;
+                                    ui.set_width(inner - 2.0 * (side + theme::space::SM));
+                                    ui.add_space(nudge);
+                                    ui.add(egui::Label::new(egui::RichText::new(text).size(theme::SMALL).line_height(Some(line)).color(t.text)).wrap());
+                                    ui.add_space(nudge);
                                 });
+                                if icons::button(ui, "x", theme::ControlSize::Small, false, "Dismiss").clicked() {
+                                    dismiss = Some(i);
+                                }
                             });
                         });
-                    ui.add_space(crate::theme::space::SM);
                 }
             });
         if let Some(i) = dismiss {

@@ -475,12 +475,11 @@ pub fn assets_toggle(app: &mut CraftApp, ui: &mut Ui, mut on: bool) {
             &[("model", &p.model), ("picture", &p.picture)],
         )
     };
-    ui.horizontal_wrapped(|ui| {
-        ui.label(RichText::new(note).color(if no_key { t.warning } else { t.text_dim }).size(theme::SMALL));
-        if no_key && widgets::link(ui, "Add a fal.ai key").clicked() {
-            app.state.modal = Some(Modal::Assets);
-        }
-    });
+    let ink = if no_key { t.warning } else { t.text_faint };
+    ui.add(egui::Label::new(RichText::new(note).color(ink).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION)))).wrap());
+    if no_key && widgets::link(ui, "Add a fal.ai key").clicked() {
+        app.state.modal = Some(Modal::Assets);
+    }
 }
 
 /// Asks for a fal.ai key when generated assets are turned on without one.
