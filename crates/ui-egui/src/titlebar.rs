@@ -158,6 +158,7 @@ pub fn show(app: &mut CraftApp, ui: &mut Ui) {
             for state in [&mut w.inactive, &mut w.hovered, &mut w.active, &mut w.open] {
                 state.bg_stroke = egui::Stroke::NONE;
             }
+            w.inactive.weak_bg_fill = egui::Color32::TRANSPARENT;
             ui.menu_button(theme::label_text(&tr("Help"), theme::LABEL * s).color(t.text_dim), |ui| {
                 if widgets::menu_item(ui, false, tr("Check for Updates…")).clicked() {
                     app.updates.check(ui.ctx());

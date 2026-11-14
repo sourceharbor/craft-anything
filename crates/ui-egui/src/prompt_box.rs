@@ -138,7 +138,7 @@ pub fn show(ui: &mut Ui, text: &mut String, attachments: &[PathBuf], b: PromptBo
     let focused = ui.memory(|m| m.has_focus(id));
     let stroke = egui::Stroke::new(1.0, if focused { t.field_border } else { t.card_border });
     let frame = egui::Frame::new()
-        .fill(t.card)
+        .fill(t.field)
         .stroke(stroke)
         .corner_radius(t.r_lg())
         .shadow(egui::Shadow { offset: [0, 2], blur: 12, spread: 0, color: t.shadow })

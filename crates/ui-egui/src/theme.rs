@@ -57,6 +57,8 @@ pub struct Tokens {
     pub card_border: Color32,
     /// A card a step above `card` (hovered cards, chips).
     pub raised: Color32,
+    /// What can be typed in or pressed: a shade lighter than the card it sits on, so it reads
+    /// as something to use.
     pub field: Color32,
     pub field_border: Color32,
     pub hover: Color32,
@@ -119,10 +121,10 @@ impl Tokens {
                 card: Color32::from_rgb(0x1b, 0x1c, 0x1f),
                 card_border: Color32::from_rgb(0x34, 0x34, 0x36),
                 raised: Color32::from_rgb(0x22, 0x23, 0x25),
-                field: Color32::from_rgb(0x1b, 0x1c, 0x1f),
+                field: Color32::from_rgb(0x22, 0x23, 0x26),
                 field_border: Color32::from_rgb(0x6c, 0x6c, 0x6c),
-                hover: Color32::from_rgb(0x22, 0x23, 0x25),
-                pressed: Color32::from_rgb(0x2d, 0x2e, 0x30),
+                hover: Color32::from_rgb(0x2a, 0x2b, 0x2e),
+                pressed: Color32::from_rgb(0x33, 0x34, 0x37),
                 text: Color32::from_rgb(0xf2, 0xf1, 0xee),
                 text_dim: Color32::from_rgb(0xb3, 0xb3, 0xb2),
                 text_faint: Color32::from_rgb(0x8d, 0x8d, 0x8d),
@@ -151,7 +153,7 @@ impl Tokens {
                 card: Color32::from_rgb(0xfa, 0xf9, 0xf7),
                 card_border: Color32::from_rgb(0xce, 0xcd, 0xcb),
                 raised: Color32::from_rgb(0xe9, 0xe8, 0xe4),
-                field: Color32::from_rgb(0xfa, 0xf9, 0xf7),
+                field: Color32::WHITE,
                 field_border: Color32::from_rgb(0x86, 0x85, 0x85),
                 hover: Color32::from_rgb(0xe4, 0xe4, 0xe1),
                 pressed: Color32::from_rgb(0xdb, 0xda, 0xd8),
@@ -537,11 +539,11 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
     w.noninteractive.bg_stroke = Stroke::new(1.0, t.separator);
     w.noninteractive.fg_stroke = Stroke::new(1.0, t.text_dim);
     w.noninteractive.corner_radius = t.r_sm();
-    // Buttons and combo boxes are hairline boxes on the surface (weak fill transparent at rest).
+    // Buttons and combo boxes are field-coloured boxes with a hairline edge.
     // One edge for every control, ours and egui's: soft at rest, firmer under the pointer, the
     // app colour while it's pressed or open.
     for (wv, bg, weak, stroke) in [
-        (&mut w.inactive, t.field, Color32::TRANSPARENT, t.card_border),
+        (&mut w.inactive, t.field, t.field, t.card_border),
         (&mut w.hovered, t.hover, t.hover, t.field_border),
         (&mut w.active, t.pressed, t.pressed, t.accent),
         // An open dropdown is edged in the app colour, like a field being typed in.

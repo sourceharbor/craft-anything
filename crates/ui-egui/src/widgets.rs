@@ -157,7 +157,7 @@ pub fn suggestion(ui: &mut Ui, text: &str) -> Response {
     ui.painter().rect(
         rect,
         t.radius,
-        theme::mix(Color32::TRANSPARENT, t.hover, h),
+        theme::mix(t.field, t.hover, h),
         Stroke::new(1.0, theme::mix(t.card_border, t.field_border, h)),
         egui::StrokeKind::Inside,
     );
@@ -182,7 +182,7 @@ pub fn choice_tile(ui: &mut Ui, size: Vec2, icon: &str, label: &str, blurb: &str
     let (fill, stroke) = if on {
         (t.accent_soft, Stroke::new(2.0, t.accent))
     } else {
-        (theme::mix(Color32::TRANSPARENT, t.hover, h), Stroke::new(1.0, theme::mix(t.card_border, t.field_border, h)))
+        (theme::mix(t.field, t.hover, h), Stroke::new(1.0, theme::mix(t.card_border, t.field_border, h)))
     };
     ui.painter().rect(rect, t.radius, fill, stroke, egui::StrokeKind::Inside);
     let icon_rect = egui::Rect::from_center_size(egui::pos2(rect.left() + 28.0, rect.center().y), Vec2::splat(24.0));
@@ -290,7 +290,7 @@ impl egui::Widget for Button<'_> {
             _ if !enabled => (clear, if kind == ButtonKind::Ghost { clear } else { t.card_border }, t.text_faint, t.text_faint),
             ButtonKind::Primary => (theme::mix(t.text, t.canvas, if down { 0.25 } else { 0.14 * h }), clear, t.canvas, t.canvas),
             ButtonKind::Secondary => {
-                (if down { t.pressed } else { theme::mix(t.card, t.hover, h) }, theme::mix(t.card_border, t.field_border, h), t.text, t.icon)
+                (if down { t.pressed } else { theme::mix(t.field, t.hover, h) }, theme::mix(t.card_border, t.field_border, h), t.text, t.icon)
             }
             ButtonKind::Ghost => {
                 let ink = theme::mix(t.text_dim, t.text, h);
