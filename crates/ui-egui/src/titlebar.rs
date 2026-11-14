@@ -15,7 +15,7 @@ use egui::{RichText, Ui, Vec2};
 pub const NATIVE_FRAME: bool = cfg!(target_os = "macos");
 /// Height of the custom title bar. On macOS it matches the system's title bar, so its window
 /// buttons sit centred in it.
-const HEIGHT: f32 = if NATIVE_FRAME { 32.0 } else { 40.0 };
+pub const HEIGHT: f32 = if NATIVE_FRAME { 32.0 } else { 40.0 };
 /// Height of the switches and buttons in the bar.
 const CONTROL: f32 = if NATIVE_FRAME { 26.0 } else { 30.0 };
 /// How close to the window edge the pointer must be to resize.
@@ -151,21 +151,6 @@ pub fn show(app: &mut CraftApp, ui: &mut Ui) {
             app.state.screen = Screen::Home;
         }
         ui.label(theme::label_text("Craft Anything", theme::LABEL * s).color(t.text).strong());
-        #[cfg(not(target_arch = "wasm32"))]
-        ui.scope(|ui| {
-            // Part of the bar: no box until the pointer is on it.
-            let w = &mut ui.visuals_mut().widgets;
-            for state in [&mut w.inactive, &mut w.hovered, &mut w.active, &mut w.open] {
-                state.bg_stroke = egui::Stroke::NONE;
-            }
-            w.inactive.weak_bg_fill = egui::Color32::TRANSPARENT;
-            ui.menu_button(theme::label_text(&tr("Help"), theme::LABEL * s).color(t.text_dim), |ui| {
-                if widgets::menu_item(ui, false, tr("Check for Updates…")).clicked() {
-                    app.updates.check(ui.ctx());
-                    ui.close();
-                }
-            });
-        });
         let in_project = app.state.screen == Screen::Project;
         let project = if in_project { app.workspace.as_ref().map(|w| w.manifest.name.clone()) } else { app.view.project.clone() };
         let target = if in_project { None } else { app.view.active_target().map(|t| (t.name.clone(), t.kind)) };
@@ -200,6 +185,18 @@ pub fn show(app: &mut CraftApp, ui: &mut Ui) {
             ui.spacing_mut().item_spacing.x = theme::space::SM * s;
             // Without window buttons on the right, keep the controls off the window's rounded corner.
             ui.add_space(if NATIVE_FRAME { 12.0 } else { 4.0 } * s);
+            // Help sits at the end of the bar, apart from what changes how the app works.
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let help = icons::button_box(ui, "circle-help", CONTROL * s, false, "Help");
+                egui::Popup::from_toggle_button_response(&help).show(|ui| {
+                    if widgets::menu_item(ui, false, tr("Check for Updates…")).clicked() {
+                        app.updates.check(ui.ctx());
+                        ui.close();
+                    }
+                });
+                rule(ui);
+            }
             if let Some((title, fraction, message)) = download {
                 if download_pill(ui, &title, fraction).on_hover_text(message).clicked() {
                     app.state.modal = Some(match app.engine_flow.job {

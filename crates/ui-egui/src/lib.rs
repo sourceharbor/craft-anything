@@ -2011,33 +2011,38 @@ impl CraftApp {
             return;
         }
         let t = theme::Tokens::get(ctx);
-        let width = (ctx.content_rect().width() - 32.0).clamp(200.0, 640.0);
+        // Narrow, in the top right corner under the title bar: at the bottom they sat on the
+        // prompt box's switches, the very controls that had just been pressed.
+        let width = (ctx.content_rect().width() - 32.0).clamp(200.0, 380.0);
         let mut dismiss = None;
-        egui::Area::new(egui::Id::new("toasts")).order(egui::Order::Foreground).anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -16.0)).show(ctx, |ui| {
-            ui.set_width(width);
-            for (i, (text, error)) in self.state.toasts.iter().enumerate() {
-                egui::Frame::new()
-                    .fill(t.raised)
-                    .stroke(egui::Stroke::new(1.0, if *error { t.danger.gamma_multiply(0.6) } else { t.card_border }))
-                    .corner_radius(t.r_lg())
-                    .shadow(egui::Shadow { offset: [0, 4], blur: 16, spread: 0, color: t.shadow })
-                    .inner_margin(theme::pad::BAR)
-                    .show(ui, |ui| {
-                        ui.set_width(width - 28.0);
-                        ui.horizontal(|ui| {
-                            let (icon, col) = if *error { ("triangle-alert", t.danger) } else { ("check", t.success) };
-                            icons::show(ui, icon, crate::theme::icon::MD, col);
-                            ui.add(egui::Label::new(egui::RichText::new(text).color(if *error { t.text } else { t.text_dim })).wrap());
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if icons::button(ui, "x", crate::theme::ControlSize::Medium, false, "Dismiss").clicked() {
-                                    dismiss = Some(i);
-                                }
+        egui::Area::new(egui::Id::new("toasts"))
+            .order(egui::Order::Foreground)
+            .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-theme::space::LG, titlebar::HEIGHT + theme::space::MD))
+            .show(ctx, |ui| {
+                ui.set_width(width);
+                for (i, (text, error)) in self.state.toasts.iter().enumerate() {
+                    egui::Frame::new()
+                        .fill(t.raised)
+                        .stroke(egui::Stroke::new(1.0, if *error { t.danger.gamma_multiply(0.6) } else { t.card_border }))
+                        .corner_radius(t.r_lg())
+                        .shadow(egui::Shadow { offset: [0, 4], blur: 16, spread: 0, color: t.shadow })
+                        .inner_margin(theme::pad::BAR)
+                        .show(ui, |ui| {
+                            ui.set_width(width - 28.0);
+                            ui.horizontal(|ui| {
+                                let (icon, col) = if *error { ("triangle-alert", t.danger) } else { ("check", t.success) };
+                                icons::show(ui, icon, crate::theme::icon::MD, col);
+                                ui.add(egui::Label::new(egui::RichText::new(text).color(if *error { t.text } else { t.text_dim })).wrap());
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if icons::button(ui, "x", crate::theme::ControlSize::Medium, false, "Dismiss").clicked() {
+                                        dismiss = Some(i);
+                                    }
+                                });
                             });
                         });
-                    });
-                ui.add_space(crate::theme::space::SM);
-            }
-        });
+                    ui.add_space(crate::theme::space::SM);
+                }
+            });
         if let Some(i) = dismiss {
             self.state.toasts.remove(i);
             if i < self.toast_at.len() {
