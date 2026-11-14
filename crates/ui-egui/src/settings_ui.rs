@@ -168,9 +168,9 @@ fn general(app: &mut CraftApp, ui: &mut Ui) {
     }
     row(ui, "When a folder you pick has files", "Whether they're the app to edit in place, or material the app starts from beside them.", |ui| {
         let current = crate::folders::EXISTING_CHOICES.iter().find(|(_, v)| *v == app.settings.existing_files).map_or("Ask each time", |(l, _)| *l);
-        egui::ComboBox::from_id_salt("existing-files").icon(widgets::combo_icon).selected_text(tr(current)).show_ui(ui, |ui| {
+        widgets::dropdown("existing-files").selected_text(tr(current)).show_ui(ui, |ui| {
             for (label, value) in crate::folders::EXISTING_CHOICES {
-                if ui.selectable_label(app.settings.existing_files == value, tr(label)).clicked() {
+                if widgets::menu_item(ui, app.settings.existing_files == value, tr(label)).clicked() {
                     app.settings.existing_files = value;
                     app.settings_changed();
                 }
@@ -202,14 +202,14 @@ fn language(app: &mut CraftApp, ui: &mut Ui) {
     row(ui, "Language", "", |ui| {
         let selected = (!app.settings.language.trim().is_empty()).then(|| crate::i18n::language_from_tag(&app.settings.language).unwrap_or("en"));
         let current = LANGUAGES.iter().find(|l| Some(l.code) == selected).map(|l| l.name).unwrap_or("System");
-        egui::ComboBox::from_id_salt("lang").icon(widgets::combo_icon).selected_text(tr(current)).show_ui(ui, |ui| {
-            if ui.selectable_label(app.settings.language.trim().is_empty(), tr("System")).clicked() {
+        widgets::dropdown("lang").selected_text(tr(current)).show_ui(ui, |ui| {
+            if widgets::menu_item(ui, app.settings.language.trim().is_empty(), tr("System")).clicked() {
                 app.settings.language.clear();
                 crate::i18n::set_language("");
                 app.settings_changed();
             }
             for l in LANGUAGES {
-                if ui.selectable_label(selected == Some(l.code), l.name).clicked() {
+                if widgets::menu_item(ui, selected == Some(l.code), l.name).clicked() {
                     app.settings.language = l.code.into();
                     crate::i18n::set_language(l.code);
                     app.settings_changed();
@@ -312,7 +312,7 @@ fn model_options_loading(ui: &mut Ui, backend: &str) {
     ui.add_enabled_ui(false, |ui| {
         ui.horizontal_wrapped(|ui| {
             ui.label(tr("Context window"));
-            egui::ComboBox::from_id_salt(("model-context", backend)).icon(widgets::combo_icon).selected_text(tr("Default")).show_ui(ui, |_| {});
+            widgets::dropdown(("model-context", backend)).selected_text(tr("Default")).show_ui(ui, |_| {});
         });
     });
 }
@@ -493,9 +493,9 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                                     ui.label(RichText::new(tr("Asking for its models…")).color(t.text_faint).size(theme::CAPTION));
                                 }
                                 Some((_, Some(models))) => {
-                                    egui::ComboBox::from_id_salt(("model", &b.name)).icon(widgets::combo_icon).selected_text(&current).show_ui(ui, |ui| {
+                                    widgets::dropdown(("model", &b.name)).selected_text(&current).show_ui(ui, |ui| {
                                         for m in models {
-                                            if ui.selectable_label(*m == current, m).clicked() && *m != current {
+                                            if widgets::menu_item(ui, *m == current, m).clicked() && *m != current {
                                                 chosen_model = Some((b.name.clone(), m.clone()));
                                             }
                                         }
@@ -522,11 +522,12 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                             if !effort_levels.is_empty() {
                                 ui.label(RichText::new(tr("Effort:")).color(t.text_faint).size(theme::CAPTION));
                                 let shown = effort.map_or("default", craft_anything_ai::Effort::as_str);
-                                egui::ComboBox::from_id_salt(("effort", &b.name)).icon(widgets::combo_icon).selected_text(shown).show_ui(ui, |ui| {
+                                widgets::dropdown(("effort", &b.name)).selected_text(shown).show_ui(ui, |ui| {
                                     // Claude always has a level; an OpenAI-style API is sent none until one is chosen.
                                     let unset = (effort_levels != craft_anything_ai::Effort::ALL).then_some(None);
                                     for e in unset.into_iter().chain(effort_levels.iter().map(|&e| Some(e))) {
-                                        if ui.selectable_label(e == effort, e.map_or("default", craft_anything_ai::Effort::as_str)).clicked() && e != effort {
+                                        if widgets::menu_item(ui, e == effort, e.map_or("default", craft_anything_ai::Effort::as_str)).clicked() && e != effort
+                                        {
                                             chosen_effort = Some((b.name.clone(), e));
                                         }
                                     }
@@ -546,15 +547,12 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                                             .and_then(|value| choices.context.iter().find(|choice| choice.value == value))
                                             .map(|choice| tr(&choice.label))
                                             .unwrap_or_else(|| tr("Default"));
-                                        egui::ComboBox::from_id_salt(("model-context", &b.name)).icon(widgets::combo_icon).selected_text(label).show_ui(
-                                            ui,
-                                            |ui| {
-                                                changed |= ui.selectable_value(&mut draft.context, None, tr("Default")).changed();
-                                                for choice in &choices.context {
-                                                    changed |= ui.selectable_value(&mut draft.context, Some(choice.value), tr(&choice.label)).changed();
-                                                }
-                                            },
-                                        );
+                                        widgets::dropdown(("model-context", &b.name)).selected_text(label).show_ui(ui, |ui| {
+                                            changed |= ui.selectable_value(&mut draft.context, None, tr("Default")).changed();
+                                            for choice in &choices.context {
+                                                changed |= ui.selectable_value(&mut draft.context, Some(choice.value), tr(&choice.label)).changed();
+                                            }
+                                        });
                                     });
                                 });
                                 if changed {
@@ -948,12 +946,12 @@ fn builds(app: &mut CraftApp, ui: &mut Ui) {
     let table = craft_anything_engines::assets::Catalogue::built_in();
     row(ui, "Picture model", "What pictures and textures are made with.", |ui| {
         let current = table.image_model(a.image_model.as_deref()).or_else(|_| table.image_model(None)).map(|m| m.name.clone()).unwrap_or_default();
-        egui::ComboBox::from_id_salt("image-model").icon(widgets::combo_icon).selected_text(current).show_ui(ui, |ui| {
+        widgets::dropdown("image-model").selected_text(current).show_ui(ui, |ui| {
             for m in table.images() {
                 let price = crate::usage::asset_cost_words(m.cost(craft_anything_engines::assets::Shape::Square));
                 let label = format!("{} · {} {}", m.name, price, tr("a picture"));
                 let on = a.image_model.as_deref() == Some(m.id.as_str());
-                if ui.selectable_label(on, label).on_hover_text(&m.licence).clicked() && !on {
+                if widgets::menu_item(ui, on, label).on_hover_text(&m.licence).clicked() && !on {
                     a.image_model = Some(m.id.clone());
                     changed = true;
                 }

@@ -695,7 +695,10 @@ impl CraftApp {
         theme::install_fonts(ctx);
         egui_extras::install_image_loaders(ctx);
         // The zoom keys are ours (`shortcuts`), so zoom stays inside ZOOM_RANGE.
-        ctx.options_mut(|o| o.zoom_with_keyboard = false);
+        ctx.options_mut(|o| {
+            o.zoom_with_keyboard = false;
+            o.input_options.line_scroll_speed = theme::WHEEL_STEP;
+        });
     }
 
     /// Gives the macOS app its menu bar (nothing elsewhere). Call once the window is open.

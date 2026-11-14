@@ -150,17 +150,14 @@ pub fn show(ui: &mut Ui, fields: &[Field], values: &mut BTreeMap<String, String>
                         }
                     }
                     _ if !f.choices.is_empty() => {
-                        egui::ComboBox::from_id_salt(("choice", &f.name))
-                            .icon(widgets::combo_icon)
-                            .selected_text(if v.is_empty() { "—".to_string() } else { v.clone() })
-                            .show_ui(ui, |ui| {
-                                if !f.required {
-                                    ui.selectable_value(v, String::new(), "—");
-                                }
-                                for c in &f.choices {
-                                    ui.selectable_value(v, c.clone(), c);
-                                }
-                            });
+                        widgets::dropdown(("choice", &f.name)).selected_text(if v.is_empty() { "—".to_string() } else { v.clone() }).show_ui(ui, |ui| {
+                            if !f.required {
+                                ui.selectable_value(v, String::new(), "—");
+                            }
+                            for c in &f.choices {
+                                ui.selectable_value(v, c.clone(), c);
+                            }
+                        });
                     }
                     FieldKind::Json => {
                         ui.add(

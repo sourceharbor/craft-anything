@@ -48,6 +48,7 @@ Simple mode, `Small` in Advanced.
 | An icon on its own | `icons::button(ui, name, ControlSize, selected, tooltip)` |
 | A link in text | `link` |
 | One of a few choices | `segmented(ui, options, selected, ControlSize)`; big choices with words: `choice_tile` |
+| One of many choices | `dropdown(id)` (egui's combo box, set up) with a `menu_item` per row |
 | On/off | `toggle` |
 | A text field | `egui::TextEdit` with `.frame(text_field_frame(&t))` (`Large`) or `text_field_frame_compact` (`Medium`) |
 | A status word | `pill`; how sure we are: `confidence_badge` |
@@ -57,7 +58,8 @@ Simple mode, `Small` in Advanced.
 | Nothing to show yet | `empty_state` |
 | Work in progress | `Spinner`, `ProgressBar`, `working` (never egui's own: they redraw every frame) |
 
-Every component paints its hover and pressed states, a 2 px focus ring (`focus_ring`), a
+Every component paints its hover and pressed states, a focus ring (`focus_ring`: a hairline in
+the app colour and a soft 3 px halo), a
 disabled state where it has one, and names itself for screen readers. Labels are translated
 inside the component: pass the English key.
 
@@ -68,8 +70,11 @@ inside the component: pass the English key.
 - A size worked out from another (`body.size + 2.0`, a title bar size times its zoom) is fine.
 - Padding with four different sides (a prompt box that leaves room for its buttons) is written
   as `Margin { .. }` where it is used; even padding comes from `pad`.
-- Rows in a menu or a combo box's list are egui's own (`ui.button`, `selectable_label`) and take
-  their look from `theme::apply`.
+- Rows in a right-click or title bar menu are egui's own (`ui.button`) and take their look from
+  `theme::apply`; a dropdown's rows are `menu_item`s.
+- Scrolling: one notch of the wheel moves `theme::WHEEL_STEP` points and eases there; scroll bars
+  are a thumb without a track (`theme::scroll_style`).
+- Text sits on whole pixels (`subpixel_binning` is off), which keeps small text sharp at 100 %.
 - The title bar follows the window's chrome (and, on macOS, keeps its size when the app zooms),
   so it scales the same tokens instead of using `ControlSize`.
 - Check a change in both themes: `cargo run -p craft-anything-ui-egui --example snapshot -- --out-dir <dir>`

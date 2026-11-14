@@ -58,6 +58,58 @@ pub fn toggle(ui: &mut Ui, on: &mut bool, label: &str) -> Response {
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
+/// Every dropdown field: egui's combo box with our arrow, and a list whose rows are
+/// [`menu_item`]s sitting close together.
+pub fn dropdown(id_salt: impl egui::AsIdSalt) -> egui::ComboBox {
+    egui::ComboBox::from_id_salt(id_salt).icon(combo_icon).popup_style(egui::style::StyleModifier::from(|s: &mut egui::Style| {
+        s.spacing.item_spacing.y = theme::space::XXS;
+    }))
+}
+
+/// How long a dropdown's list takes to fade in.
+const POPUP_FADE: f64 = 0.12;
+
+/// How visible the list `ui` belongs to is as it fades in. The fade starts again when the list
+/// wasn't drawn on the frame before (by frame, not by the clock: frames can be far apart).
+fn popup_fade(ui: &Ui) -> f32 {
+    let (now, frame) = (ui.input(|i| i.time), ui.ctx().cumulative_frame_nr());
+    let id = ui.id().with("popup-fade");
+    let (since, seen) = ui.data(|d| d.get_temp::<(f64, u64)>(id)).unwrap_or((now, frame));
+    let since = if frame.saturating_sub(seen) > 1 { now } else { since };
+    ui.data_mut(|d| d.insert_temp(id, (since, frame)));
+    let how = ((now - since) / POPUP_FADE).clamp(0.0, 1.0) as f32;
+    if how < 1.0 {
+        ui.ctx().request_repaint();
+    }
+    // Never invisible: the first frame already shows where the list is.
+    0.35 + 0.65 * how
+}
+
+/// One row of a dropdown's list: a soft fill eases in under the pointer, and the chosen row has a
+/// tick at its end (so it doesn't rely on colour alone). `text` is shown as given.
+pub fn menu_item(ui: &mut Ui, selected: bool, text: impl Into<String>) -> Response {
+    let t = Tokens::get(ui.ctx());
+    let text = text.into();
+    ui.set_opacity(popup_fade(ui));
+    let size = ControlSize::Medium;
+    let galley = ui.painter().layout_no_wrap(text.clone(), egui::FontId::proportional(size.text()), t.text);
+    let tick = size.icon() + theme::space::SM;
+    let wanted = galley.size().x + theme::space::SM * 2.0 + tick;
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(wanted.max(ui.available_width()), size.height()), Sense::click());
+    let h = hover_t(ui, &resp);
+    let fill = if resp.is_pointer_button_down_on() { t.pressed } else { theme::mix(Color32::TRANSPARENT, t.hover, h) };
+    ui.painter().rect_filled(rect, t.radius_sm, fill);
+    let ink = if selected { t.text } else { theme::mix(t.text_dim, t.text, h) };
+    ui.painter().galley_with_override_text_color(egui::pos2(rect.left() + theme::space::SM, rect.center().y - galley.size().y / 2.0), galley, ink);
+    if selected {
+        let at = egui::Rect::from_center_size(egui::pos2(rect.right() - theme::space::SM - size.icon() / 2.0, rect.center().y), Vec2::splat(size.icon()));
+        icons::paint(ui, at, "check", size.icon(), t.accent_ink);
+    }
+    focus_ring(ui, &resp, rect);
+    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &text));
+    resp.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
 /// The dropdown arrow for every combo box: a Lucide chevron instead of egui's filled triangle.
 pub fn combo_icon(ui: &Ui, rect: egui::Rect, _visuals: &egui::style::WidgetVisuals, _open: bool) {
     icons::paint(ui, rect.expand(2.0), "chevron-down", theme::icon::SM, Tokens::get(ui.ctx()).icon);
@@ -139,11 +191,13 @@ pub fn choice_tile(ui: &mut Ui, size: Vec2, icon: &str, label: &str, blurb: &str
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
-/// A visible keyboard-focus ring around `rect` when `resp` has focus (2 px accent, outside).
+/// A visible keyboard-focus ring around `rect` when `resp` has focus: a hairline in the app
+/// colour on the control's edge and a soft 3 px halo outside it.
 pub fn focus_ring(ui: &Ui, resp: &Response, rect: egui::Rect) {
     if resp.has_focus() {
         let t = Tokens::get(ui.ctx());
-        ui.painter().rect_stroke(rect.expand(2.0), t.radius + 2.0, Stroke::new(2.0, t.accent), egui::StrokeKind::Outside);
+        ui.painter().rect_stroke(rect, t.radius, Stroke::new(3.0, t.accent_ink.gamma_multiply(0.45)), egui::StrokeKind::Outside);
+        ui.painter().rect_stroke(rect, t.radius, Stroke::new(1.0, t.accent_ink), egui::StrokeKind::Inside);
     }
 }
 
@@ -166,7 +220,7 @@ pub enum ButtonKind {
     Secondary,
     /// An action that stays quiet until it's wanted: no box until the pointer is on it.
     Ghost,
-    /// An action that deletes or can't be undone: edged and lettered in the danger colour.
+    /// An action that deletes or can't be undone: filled in the danger colour.
     Danger,
 }
 
@@ -226,10 +280,7 @@ impl egui::Widget for Button<'_> {
                 let ink = theme::mix(t.text_dim, t.text, h);
                 (if down { t.pressed } else { theme::mix(clear, t.hover, h) }, clear, ink, ink)
             }
-            ButtonKind::Danger => {
-                let wash = t.danger.gamma_multiply(if down { 0.24 } else { 0.14 });
-                (theme::mix(clear, wash, if down { 1.0 } else { h }), theme::mix(t.danger.gamma_multiply(0.5), t.danger, h), t.danger, t.danger)
-            }
+            ButtonKind::Danger => (theme::mix(t.danger, t.canvas, if down { 0.2 } else { 0.1 * h }), clear, t.canvas, t.canvas),
         };
         ui.painter().rect(rect, t.radius, fill, Stroke::new(1.0, edge), egui::StrokeKind::Inside);
         let mut x = (rect.center().x - (icon_w + galley.size().x) / 2.0).round();
@@ -341,12 +392,12 @@ pub fn pill(ui: &mut Ui, text: &str, fg: Color32, bg: Color32) -> Response {
 
 /// [`pill`] with a given label size, its padding scaled to match.
 pub fn pill_sized(ui: &mut Ui, text: &str, fg: Color32, bg: Color32, text_size: f32) -> Response {
-    let t = Tokens::get(ui.ctx());
     let label = tr(text);
     let g = label_galley(ui, &label, text_size, fg);
-    let size = Vec2::new(g.size().x + text_size * 14.0 / 11.0, g.size().y + text_size * 8.0 / 11.0);
+    let size = Vec2::new(g.size().x + text_size * 18.0 / 11.0, g.size().y + text_size * 6.0 / 11.0);
     let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
-    ui.painter().rect_filled(rect, t.r_sm(), bg);
+    // A full pill, whatever its size.
+    ui.painter().rect_filled(rect, rect.height() / 2.0, bg);
     ui.painter().galley_with_override_text_color(rect.center() - g.size() / 2.0, g, fg);
     // Painted text: say it to screen readers too.
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, &label));
@@ -355,14 +406,13 @@ pub fn pill_sized(ui: &mut Ui, text: &str, fg: Color32, bg: Color32, text_size: 
 
 /// The "how sure are we" badge: a coloured dot and the plain label.
 pub fn confidence_badge(ui: &mut Ui, c: Option<Confidence>) -> Response {
-    let t = Tokens::get(ui.ctx());
     let col = confidence_color(c);
     let font = theme::medium(theme::CAPTION);
     let g = ui.painter().layout_no_wrap(tr(confidence_label(c)), font, col);
     let size = Vec2::new(g.size().x + 26.0, g.size().y + 7.0);
     let (rect, resp) = ui.allocate_exact_size(size, Sense::hover());
     let bg = col.gamma_multiply(0.13);
-    ui.painter().rect(rect, t.r_sm(), bg, Stroke::new(1.0, col.gamma_multiply(0.45)), egui::StrokeKind::Inside);
+    ui.painter().rect(rect, rect.height() / 2.0, bg, Stroke::new(1.0, col.gamma_multiply(0.45)), egui::StrokeKind::Inside);
     ui.painter().circle_filled(egui::pos2(rect.left() + 10.0, rect.center().y), 3.5, col);
     ui.painter().galley_with_override_text_color(egui::pos2(rect.left() + 18.0, rect.center().y - g.size().y / 2.0), g, col);
     let tip = match c {

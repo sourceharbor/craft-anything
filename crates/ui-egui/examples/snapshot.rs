@@ -26,6 +26,19 @@ static LANG: std::sync::OnceLock<String> = std::sync::OnceLock::new();
 static LIGHT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 fn render(out: &std::path::Path, name: &str, w: f32, h: f32, scale: f32, make: impl FnOnce() -> CraftApp + 'static) {
+    render_then(out, name, w, h, scale, make, |_| {});
+}
+
+/// [`render`], after `act` has used the settled screen (a click that opens a list).
+fn render_then(
+    out: &std::path::Path,
+    name: &str,
+    w: f32,
+    h: f32,
+    scale: f32,
+    make: impl FnOnce() -> CraftApp + 'static,
+    act: impl FnOnce(&mut egui_kittest::Harness<'static, CraftApp>),
+) {
     let mut harness =
         egui_kittest::Harness::builder().with_size(egui::vec2(w, h)).with_pixels_per_point(scale).with_max_steps(64).wgpu().build_eframe(move |cc| {
             CraftApp::setup_context(&cc.egui_ctx);
@@ -43,6 +56,7 @@ fn render(out: &std::path::Path, name: &str, w: f32, h: f32, scale: f32, make: i
     for _ in 0..24 {
         harness.step();
     }
+    act(&mut harness);
     match harness.render() {
         Ok(img) => {
             let path = out.join(format!("{name}.png"));
@@ -152,6 +166,32 @@ fn main() {
             a.state.settings_open = true;
             a
         });
+    }
+    // Settings with the language list open: a dropdown's rows, the tick on the chosen one.
+    if want("settings-dropdown") {
+        render_then(
+            &out,
+            "settings-dropdown",
+            w,
+            h,
+            scale,
+            || {
+                let mut a = demo::app(demo::engine(Mode::Beginner, true));
+                demo::fill_projects(&mut a);
+                a.state.settings_open = true;
+                a
+            },
+            |harness| {
+                use egui_kittest::kittest::Queryable as _;
+                harness.get_by_value("English").click();
+                harness.step();
+                // The list fades in on the clock.
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                for _ in 0..12 {
+                    harness.step();
+                }
+            },
+        );
     }
     if want("palette") {
         render(&out, "palette", w, h, scale, || {

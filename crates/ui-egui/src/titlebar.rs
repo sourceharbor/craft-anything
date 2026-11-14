@@ -328,22 +328,22 @@ fn backend_picker(app: &mut CraftApp, ui: &mut Ui) {
         spacing.button_padding *= s;
         spacing.icon_width *= s;
         spacing.icon_spacing *= s;
-        egui::ComboBox::from_id_salt("backend-picker")
+        widgets::dropdown("backend-picker")
             .selected_text(theme::label_text(&current, theme::LABEL * s).color(if app.state.backend.is_some() { t.text } else { t.text_dim }))
             .icon(move |ui, rect, _, _| icons::paint(ui, rect.expand(2.0 * s), "chevron-down", 14.0 * s, Tokens::get(ui.ctx()).icon))
             .width(190.0 * s)
             .show_ui(ui, |ui| {
                 for b in &app.backends {
                     let on = app.state.backend.as_ref() == Some(&b.name);
-                    if ui.selectable_label(on, &b.name).on_hover_text(format!("{:?} · {}", b.kind, b.model)).clicked() {
+                    if widgets::menu_item(ui, on, &b.name).on_hover_text(format!("{:?} · {}", b.kind, b.model)).clicked() {
                         choice = Some(Some(b.name.clone()));
                     }
                 }
-                if ui.selectable_label(app.state.backend.is_none(), tr("No AI (built-in engines only)")).clicked() {
+                if widgets::menu_item(ui, app.state.backend.is_none(), tr("No AI (built-in engines only)")).clicked() {
                     choice = Some(None);
                 }
                 ui.separator();
-                if ui.selectable_label(false, tr("Set up a brain…")).clicked() {
+                if widgets::menu_item(ui, false, tr("Set up a brain…")).clicked() {
                     setup = true;
                 }
             })

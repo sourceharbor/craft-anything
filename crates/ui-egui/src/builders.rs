@@ -40,22 +40,19 @@ pub fn agent_model_picker(ui: &mut Ui, picker: &mut AgentModelPicker) -> bool {
     }
     let default = if picker.context.backend.config.model == "opencode" { tr("OpenCode default") } else { tr("Model default") };
     let selected = picker.model.as_deref().unwrap_or(&default);
-    let response = egui::ComboBox::from_id_salt(("agent-model", &picker.context.backend.config.name))
-        .icon(widgets::combo_icon)
-        .selected_text(selected)
-        .show_ui(ui, |ui| {
-            if ui.selectable_label(picker.model.is_none(), &default).clicked() {
-                picker.model = None;
+    let response = widgets::dropdown(("agent-model", &picker.context.backend.config.name)).selected_text(selected).show_ui(ui, |ui| {
+        if widgets::menu_item(ui, picker.model.is_none(), &default).clicked() {
+            picker.model = None;
+            picker.thinking = None;
+        }
+        for model in models {
+            let label = if model.name == model.id { model.name.clone() } else { format!("{} · {}", model.name, model.id) };
+            if widgets::menu_item(ui, picker.model.as_ref() == Some(&model.id), label).clicked() && picker.model.as_ref() != Some(&model.id) {
+                picker.model = Some(model.id.clone());
                 picker.thinking = None;
             }
-            for model in models {
-                let label = if model.name == model.id { model.name.clone() } else { format!("{} · {}", model.name, model.id) };
-                if ui.selectable_label(picker.model.as_ref() == Some(&model.id), label).clicked() && picker.model.as_ref() != Some(&model.id) {
-                    picker.model = Some(model.id.clone());
-                    picker.thinking = None;
-                }
-            }
-        });
+        }
+    });
     widgets::named(response.response, if picker.context.backend.config.model == "opencode" { "OpenCode model" } else { "Model" });
     let model = models.iter().find(|m| picker.model.as_ref() == Some(&m.id));
     let missing = picker.model.is_some() && model.is_none();
@@ -67,15 +64,14 @@ pub fn agent_model_picker(ui: &mut Ui, picker: &mut AgentModelPicker) -> bool {
     let depths = model.map(|m| m.thinking.as_slice()).unwrap_or_default();
     ui.label(tr("Thinking depth"));
     let default_depth = tr("Model default");
-    let response = egui::ComboBox::from_id_salt(("agent-thinking", &picker.context.backend.config.name))
-        .icon(widgets::combo_icon)
+    let response = widgets::dropdown(("agent-thinking", &picker.context.backend.config.name))
         .selected_text(picker.thinking.map(|d| d.title()).unwrap_or(&default_depth))
         .show_ui(ui, |ui| {
-            if ui.selectable_label(picker.thinking.is_none(), &default_depth).clicked() {
+            if widgets::menu_item(ui, picker.thinking.is_none(), &default_depth).clicked() {
                 picker.thinking = None;
             }
             for depth in depths {
-                if ui.selectable_label(picker.thinking == Some(*depth), depth.title()).clicked() {
+                if widgets::menu_item(ui, picker.thinking == Some(*depth), depth.title()).clicked() {
                     picker.thinking = Some(*depth);
                 }
             }
@@ -374,13 +370,13 @@ pub fn built_by(app: &mut CraftApp, ui: &mut Ui) {
     let shown = app.state.make.ai.clone().unwrap_or_else(|| automatic.clone());
     ui.label(RichText::new(tr("Built by")).size(theme::BODY).color(t.text_dim));
     let mut pick = None;
-    let r = egui::ComboBox::from_id_salt("built-by").icon(widgets::combo_icon).selected_text(shown).width(220.0).show_ui(ui, |ui| {
-        if ui.selectable_label(app.state.make.ai.is_none(), automatic).on_hover_text(tr("Whatever Settings → AI builds with.")).clicked() {
+    let r = widgets::dropdown("built-by").selected_text(shown).width(220.0).show_ui(ui, |ui| {
+        if widgets::menu_item(ui, app.state.make.ai.is_none(), automatic).on_hover_text(tr("Whatever Settings → AI builds with.")).clicked() {
             pick = Some(None);
         }
         for c in &choices {
             let note = if c.found { format!("{} · {}", c.detail, tr("found on this computer; set up when you start")) } else { c.detail.clone() };
-            if ui.selectable_label(app.state.make.ai.as_ref() == Some(&c.name), &c.name).on_hover_text(note).clicked() {
+            if widgets::menu_item(ui, app.state.make.ai.as_ref() == Some(&c.name), &c.name).on_hover_text(note).clicked() {
                 pick = Some(Some(c.name.clone()));
             }
         }

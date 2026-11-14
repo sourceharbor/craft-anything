@@ -363,6 +363,8 @@ pub mod icon {
 /// The padding inside frames, built from the spacing steps.
 pub mod pad {
     use egui::Margin;
+    /// Around the rows of a menu or a dropdown's list.
+    pub const MENU: Margin = Margin::same(4);
     /// Code blocks and dense workbench boxes.
     pub const TIGHT: Margin = Margin::same(8);
     pub const PANEL: Margin = Margin::same(12);
@@ -469,16 +471,18 @@ pub fn label_text(text: &str, size: f32) -> egui::RichText {
 pub fn scroll_style() -> egui::style::ScrollStyle {
     egui::style::ScrollStyle {
         floating: true,
-        bar_width: 10.0,
+        bar_width: 8.0,
         floating_width: 6.0,
         floating_allocated_width: 8.0,
+        handle_min_length: space::XXL,
         foreground_color: true,
+        // No track: only the thumb shows, a pill that thickens a little under the pointer.
         dormant_background_opacity: 0.0,
-        active_background_opacity: 0.5,
-        interact_background_opacity: 0.8,
+        active_background_opacity: 0.0,
+        interact_background_opacity: 0.0,
         dormant_handle_opacity: SCROLL_THUMB_AT_REST,
-        active_handle_opacity: 0.65,
-        interact_handle_opacity: 0.85,
+        active_handle_opacity: 0.6,
+        interact_handle_opacity: 0.8,
         ..egui::style::ScrollStyle::solid()
     }
 }
@@ -486,12 +490,19 @@ pub fn scroll_style() -> egui::style::ScrollStyle {
 /// How opaque a scroll bar's thumb is at rest (over the text colour).
 const SCROLL_THUMB_AT_REST: f32 = 0.5;
 
+/// How far one notch of the mouse wheel scrolls, in points. egui's own step is 40, which takes
+/// two or three turns for what a browser scrolls in one; it still eases to the new place.
+pub const WHEEL_STEP: f32 = 100.0;
+
 /// Apply a theme. `roomy` = Beginner mode (bigger type, more air).
 pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
     let t = Tokens::for_kind(kind);
     ctx.data_mut(|d| d.insert_temp(tokens_id(), t));
     ctx.set_theme(if t.dark() { egui::Theme::Dark } else { egui::Theme::Light });
     let mut v = if t.dark() { Visuals::dark() } else { Visuals::light() };
+    // Each glyph on a whole pixel. egui's default draws a glyph at one of four offsets inside a
+    // pixel for more even spacing, which softens small text on a display at 100 %.
+    v.text_options.subpixel_binning = false;
     v.panel_fill = t.chrome;
     v.window_fill = t.card;
     v.window_stroke = Stroke::new(1.0, t.card_border);
@@ -505,7 +516,7 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
     v.window_corner_radius = t.r_lg();
     v.menu_corner_radius = t.r();
     v.window_shadow = egui::Shadow { offset: [0, 10], blur: 28, spread: 0, color: t.shadow };
-    v.popup_shadow = egui::Shadow { offset: [0, 4], blur: 14, spread: 0, color: t.shadow };
+    v.popup_shadow = egui::Shadow { offset: [0, 8], blur: 24, spread: 0, color: t.shadow };
     v.text_edit_bg_color = Some(t.field);
     v.selection.bg_fill = t.accent_soft;
     v.selection.stroke = Stroke::new(1.0, t.accent);
@@ -525,7 +536,8 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
         (&mut w.inactive, t.field, Color32::TRANSPARENT, t.field_border),
         (&mut w.hovered, t.hover, t.hover, t.text_faint),
         (&mut w.active, t.pressed, t.pressed, t.accent),
-        (&mut w.open, t.hover, t.hover, t.field_border),
+        // An open dropdown is edged in the app colour, like a field being typed in.
+        (&mut w.open, t.hover, t.hover, t.accent),
     ] {
         wv.bg_fill = bg;
         wv.weak_bg_fill = weak;
@@ -553,7 +565,9 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
         let pad_y = ((control.height() - control.text() * 1.3) / 2.0).ceil();
         s.spacing.button_padding = egui::vec2(if roomy { space::MD } else { space::SM }, pad_y);
         s.spacing.interact_size = egui::Vec2::splat(ControlSize::Small.height());
-        s.spacing.menu_margin = pad::TIGHT;
+        s.spacing.menu_margin = pad::MENU;
+        // A dropdown's list shows nine rows and a half before it scrolls: the half row says there's more.
+        s.spacing.combo_height = 9.5 * (ControlSize::Medium.height() + space::XXS);
         s.spacing.window_margin = pad::ROOMY;
         s.spacing.icon_width = icon::SM;
         s.spacing.scroll = scroll_style();
@@ -938,8 +952,8 @@ mod tests {
     fn contrast_meets_wcag_aa_in_both_themes() {
         for k in ThemeKind::ALL {
             let t = Tokens::for_kind(k);
-            // `success` is text too (the Clean room and Ready pills), and so is `danger` (the
-            // label of a button that deletes).
+            // `success` is text too (the Clean room and Ready pills), and so is `danger` (warnings
+            // in words).
             let inks = [
                 ("text", t.text),
                 ("text_dim", t.text_dim),
@@ -957,8 +971,10 @@ mod tests {
             // Send's icon on its hover colour (an icon, so 3:1).
             assert!(contrast(t.on_accent, t.accent_hover) >= 3.0, "{k:?} icon on the hover colour: {:.2}", contrast(t.on_accent, t.accent_hover));
             assert!(contrast(t.field_border, t.canvas) >= 3.0, "{k:?} control borders: {:.2}", contrast(t.field_border, t.canvas));
-            // Main buttons are ink-filled with the canvas colour as their label.
+            // Main buttons are ink-filled with the canvas colour as their label; a button that
+            // deletes is filled in the danger colour, with the same label.
             assert!(contrast(t.canvas, t.text) >= 4.5, "{k:?} main buttons");
+            assert!(contrast(t.canvas, t.danger) >= 4.5, "{k:?} buttons that delete: {:.2}", contrast(t.canvas, t.danger));
             assert_eq!(t.accent, BRAND);
         }
     }
