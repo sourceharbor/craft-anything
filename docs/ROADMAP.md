@@ -1500,6 +1500,9 @@ Gaps found while using the app for real projects.
       and by a build in the app with a typed `~/` folder. A sign-in that expired says so instead
       of "isn't signed in" (the folder's `.claude.json` still names the account)
       — claimed: Claude (Opus 5.5), branch feature/claude-config-dir
+- [x] A Claude Code turn that fails on billing or sign-in while it uses the environment's
+      `ANTHROPIC_API_KEY` (its `apiKeySource`) says that key was used, not the subscription, and
+      how to change that, instead of pointing at the subscription's credits (#1865)
 - [ ] A live build with two Claude Code AIs signed in to two accounts, and one over SSH with a
       `~/` folder (the remote line is unit-tested, not run on another computer)
 

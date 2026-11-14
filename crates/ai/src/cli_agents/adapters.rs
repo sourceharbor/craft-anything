@@ -497,6 +497,7 @@ impl AgentAdapter for ClaudeCode {
         }
         match s("type").as_str() {
             "system" if s("subtype") == "init" => {
+                p.key_from_env = s("apiKeySource") == "ANTHROPIC_API_KEY";
                 let failed = v.get("mcp_servers").and_then(Value::as_array).and_then(|servers| {
                     servers.iter().find(|server| {
                         server.get("name").and_then(Value::as_str) == Some(MCP_NAME)
@@ -521,7 +522,12 @@ impl AgentAdapter for ClaudeCode {
                     p.failure = Some(failure);
                     let why = v.pointer("/message/content").map(content_text).unwrap_or_else(|| code.to_string());
                     let (message, hint) = claude_code_failure_in(&why, self.folder.as_deref());
-                    let remediation = hint.or_else(|| match failure.kind {
+                    // Headless Claude Code always uses the environment's key when there is one,
+                    // so the account to look at is that key's, not the subscription (#1865).
+                    let env_key = (p.key_from_env && matches!(failure.kind, FailureKind::Authentication | FailureKind::Billing)).then(|| {
+                        "Claude Code used the API key in the ANTHROPIC_API_KEY environment variable, not a Claude subscription. To build on the subscription, remove that variable and restart Craft Anything (then run `claude auth login` if it asks); to keep the key, check its credits and that it is still valid.".to_string()
+                    });
+                    let remediation = env_key.or(hint).or_else(|| match failure.kind {
                         FailureKind::Authentication => self.sign_in_fix(),
                         FailureKind::Billing => Some("Check the account's credits, plan and spending limit before trying again.".into()),
                         FailureKind::Configuration => Some("Check the chosen model and Claude Code settings before trying again.".into()),

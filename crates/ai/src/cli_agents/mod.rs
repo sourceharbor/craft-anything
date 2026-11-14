@@ -510,6 +510,9 @@ pub struct StreamParser {
     pub session_missing: bool,
     /// A protocol fact about the failed turn, independent of the text shown to the person.
     pub failure: Option<TurnFailure>,
+    /// The agent said it is using an API key from the environment, not the person's sign-in
+    /// (Claude Code's `apiKeySource`), so a billing or sign-in failure is that key's (#1865).
+    pub key_from_env: bool,
 }
 
 fn short_tool(name: &str) -> String {
@@ -556,6 +559,7 @@ impl StreamParser {
             saw_result: false,
             session_missing: false,
             failure: None,
+            key_from_env: false,
         }
     }
 
@@ -1574,6 +1578,26 @@ mod tests {
             p.line(r#"{"type":"result","is_error":true,"result":"the turn ended"}"#);
             assert_eq!(p.failure, Some(TurnFailure::new(kind)), "result must keep the more specific code");
         }
+    }
+
+    /// #1865: headless Claude Code always uses `ANTHROPIC_API_KEY` when it is set, so a billing or
+    /// sign-in failure is that key's, and the fix names the variable instead of the subscription.
+    #[test]
+    fn a_failure_on_the_environments_api_key_names_the_variable() {
+        let fix = |source: &str, code: &str| {
+            let mut p = StreamParser::new(adapter_for("claude-code"));
+            assert!(p.line(&json!({"type":"system","subtype":"init","apiKeySource":source}).to_string()).is_empty());
+            match p.line(&json!({"type":"assistant","error":code,"message":{"content":[{"type":"text","text":"Credit balance is too low"}]}}).to_string()).pop()
+            {
+                Some(AgentEvent::Error { remediation, .. }) => remediation.unwrap_or_default(),
+                other => panic!("{other:?}"),
+            }
+        };
+        for code in ["billing_error", "authentication_failed"] {
+            assert!(fix("ANTHROPIC_API_KEY", code).contains("ANTHROPIC_API_KEY"), "{code}");
+            assert!(!fix("none", code).contains("ANTHROPIC_API_KEY"), "{code}");
+        }
+        assert!(!fix("ANTHROPIC_API_KEY", "model_not_found").contains("ANTHROPIC_API_KEY"));
     }
 
     /// #506: under a Flatpak `~/.claude` is read-only, so Claude Code gets a folder of ours to save
