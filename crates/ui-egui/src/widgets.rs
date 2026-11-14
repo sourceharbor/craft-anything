@@ -403,7 +403,7 @@ pub fn segmented(ui: &mut Ui, options: &[&str], selected: usize, size: ControlSi
 /// by `scale` (the macOS title bar's, which keeps its size when the app zooms).
 pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: f32, text: f32, scale: f32) -> Option<usize> {
     let t = Tokens::get(ui.ctx());
-    let (height, pad) = (height * scale, 2.0 * scale);
+    let (height, pad) = (height * scale, SEGMENT_INSET * scale);
     let galleys: Vec<_> = options.iter().map(|o| label_galley(ui, &tr(o), text * scale, t.text)).collect();
     let widths: Vec<f32> = galleys.iter().map(|g| g.size().x + segment_pad(text) * scale).collect();
     let total: f32 = widths.iter().sum::<f32>() + 2.0 * pad;
@@ -446,6 +446,9 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
     picked
 }
 
+/// The room between the track's edge and the chosen segment's card.
+const SEGMENT_INSET: f32 = 4.0;
+
 /// How long the chosen segment's card takes to slide to another segment.
 const SLIDE: f32 = 0.2;
 
@@ -457,7 +460,7 @@ fn segment_pad(text: f32) -> f32 {
 /// How wide [`segmented`] draws `options` at `size`, for a row that needs to know before drawing them.
 pub fn segmented_width(ui: &Ui, options: &[&str], size: ControlSize) -> f32 {
     let t = Tokens::get(ui.ctx());
-    options.iter().map(|o| label_galley(ui, &tr(o), size.text(), t.text).size().x + segment_pad(size.text())).sum::<f32>() + 4.0
+    options.iter().map(|o| label_galley(ui, &tr(o), size.text(), t.text).size().x + segment_pad(size.text())).sum::<f32>() + 2.0 * SEGMENT_INSET
 }
 
 /// A small status label on a tint.
