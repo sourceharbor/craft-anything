@@ -439,6 +439,12 @@ impl ControlSize {
     }
 }
 
+/// The line height for a paragraph set at `size`: a little more air than the font's own, which
+/// packs wrapped lines tightly.
+pub fn leading(size: f32) -> f32 {
+    (size * 1.45).round()
+}
+
 /// A heading: Figtree semibold, at one of the heading sizes above.
 pub fn heading(text: impl Into<String>, size: f32) -> egui::RichText {
     egui::RichText::new(text).font(semibold(size))
@@ -532,9 +538,11 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
     w.noninteractive.fg_stroke = Stroke::new(1.0, t.text_dim);
     w.noninteractive.corner_radius = t.r_sm();
     // Buttons and combo boxes are hairline boxes on the surface (weak fill transparent at rest).
+    // One edge for every control, ours and egui's: soft at rest, firmer under the pointer, the
+    // app colour while it's pressed or open.
     for (wv, bg, weak, stroke) in [
-        (&mut w.inactive, t.field, Color32::TRANSPARENT, t.field_border),
-        (&mut w.hovered, t.hover, t.hover, t.text_faint),
+        (&mut w.inactive, t.field, Color32::TRANSPARENT, t.card_border),
+        (&mut w.hovered, t.hover, t.hover, t.field_border),
         (&mut w.active, t.pressed, t.pressed, t.accent),
         // An open dropdown is edged in the app colour, like a field being typed in.
         (&mut w.open, t.hover, t.hover, t.accent),

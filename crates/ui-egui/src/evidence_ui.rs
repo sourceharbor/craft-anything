@@ -218,7 +218,12 @@ pub fn ledger_row(ui: &mut Ui, e: &Evidence, selected: bool) -> bool {
                     ui.label(RichText::new(tr(crate::theme::confidence_label(Some(e.confidence)))).size(theme::TINY).color(col));
                 });
             });
-            ui.add(egui::Label::new(RichText::new(truncate(&e.summary, 160)).size(theme::CAPTION).color(t.text_dim)).wrap());
+            ui.add(
+                egui::Label::new(
+                    RichText::new(truncate(&e.summary, 160)).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION))).color(t.text_dim),
+                )
+                .wrap(),
+            );
         })
         .response;
     let resp = resp.interact(egui::Sense::click());

@@ -21,9 +21,10 @@ pub fn hover_t(ui: &Ui, resp: &Response) -> f32 {
     ui.ctx().animate_bool_with_time(resp.id.with("hover-t"), resp.hovered() || resp.has_focus(), 0.12)
 }
 
-/// The frame every text field uses: a field-coloured box with a 3:1 border and roomy padding.
+/// The frame every text field uses: a field-coloured box with the edge every control has at
+/// rest, and roomy padding.
 pub fn text_field_frame(t: &Tokens) -> Frame {
-    Frame::new().fill(t.field).stroke(Stroke::new(1.0, t.field_border)).corner_radius(t.r()).inner_margin(theme::pad::FIELD)
+    Frame::new().fill(t.field).stroke(Stroke::new(1.0, t.card_border)).corner_radius(t.r()).inner_margin(theme::pad::FIELD)
 }
 
 /// The text-field frame for dense panels (filters, offsets, forms).
@@ -181,7 +182,7 @@ pub fn choice_tile(ui: &mut Ui, size: Vec2, icon: &str, label: &str, blurb: &str
     let (fill, stroke) = if on {
         (t.accent_soft, Stroke::new(2.0, t.accent))
     } else {
-        (theme::mix(Color32::TRANSPARENT, t.hover, h), Stroke::new(1.0, theme::mix(t.field_border, t.text_faint, h)))
+        (theme::mix(Color32::TRANSPARENT, t.hover, h), Stroke::new(1.0, theme::mix(t.card_border, t.field_border, h)))
     };
     ui.painter().rect(rect, t.radius, fill, stroke, egui::StrokeKind::Inside);
     let icon_rect = egui::Rect::from_center_size(egui::pos2(rect.left() + 28.0, rect.center().y), Vec2::splat(24.0));
@@ -753,7 +754,7 @@ pub fn working_since(ui: &mut Ui, title: &str, detail: Option<&str>, began: Opti
                 ui.set_max_width((ui.available_width() - clock_width - ui.spacing().item_spacing.x).max(0.0));
                 ui.label(RichText::new(tr(title)).font(theme::semibold(theme::BODY)).color(t.text));
                 if !sub.is_empty() {
-                    ui.add(egui::Label::new(RichText::new(sub).color(t.text_dim).size(theme::SMALL)).wrap());
+                    ui.add(egui::Label::new(RichText::new(sub).color(t.text_dim).size(theme::SMALL).line_height(Some(theme::leading(theme::SMALL)))).wrap());
                 }
             });
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

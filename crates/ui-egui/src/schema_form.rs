@@ -184,7 +184,12 @@ pub fn show(ui: &mut Ui, fields: &[Field], values: &mut BTreeMap<String, String>
                     }
                 }
                 if !f.description.is_empty() {
-                    ui.add(egui::Label::new(RichText::new(&f.description).color(t.text_faint).size(theme::CAPTION)).wrap());
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(&f.description).color(t.text_faint).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION))),
+                        )
+                        .wrap(),
+                    );
                 }
             });
             ui.end_row();

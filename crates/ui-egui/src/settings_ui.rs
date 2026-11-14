@@ -22,7 +22,7 @@ pub fn show(app: &mut CraftApp, ctx: &egui::Context) {
     let resp = egui::Modal::new(egui::Id::new("settings-window"))
         .frame(egui::Frame::new().fill(t.card).corner_radius(t.r_lg()).inner_margin(theme::pad::CARD).stroke(egui::Stroke::new(1.0, t.card_border)))
         .show(ctx, |ui| {
-            ui.set_width(680.0);
+            ui.set_width((ctx.content_rect().width() - 2.0 * theme::space::XXL).clamp(560.0, 860.0));
             ui.horizontal(|ui| {
                 ui.label(theme::heading(tr("Settings"), theme::SECTION));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -122,10 +122,12 @@ fn row(ui: &mut Ui, title: &str, sub: &str, add: impl FnOnce(&mut Ui)) {
     let t = Tokens::get(ui.ctx());
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.set_width(220.0);
+            ui.set_width(280.0);
             ui.label(RichText::new(tr(title)).font(theme::medium(theme::BODY)));
             if !sub.is_empty() {
-                ui.add(egui::Label::new(RichText::new(tr(sub)).color(t.text_faint).size(theme::CAPTION)).wrap());
+                ui.add(
+                    egui::Label::new(RichText::new(tr(sub)).color(t.text_faint).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION)))).wrap(),
+                );
             }
         });
         add(ui);
@@ -350,12 +352,26 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
     for b in &app.backends {
         widgets::panel(&t).show(ui, |ui| {
             ui.set_width(ui.available_width());
-            // The name and model on their own row (shortened, full text on hover), the buttons on a
-            // row below that wraps: nothing overlaps however long the name or narrow the window.
+            // One left edge for the whole card. The header: the name (shortened, full text on
+            // hover), and at its end whether it's the one in use and the way to remove it.
             ui.horizontal(|ui| {
                 icons::show(ui, "bot", theme::icon::LG, if b.enabled { t.accent } else { t.text_faint });
-                ui.vertical(|ui| {
-                    ui.add(egui::Label::new(RichText::new(&b.name).font(theme::semibold(theme::SMALL))).truncate());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if confirming.as_ref() != Some(&b.name)
+                        && icons::button(ui, "trash-2", theme::ControlSize::Small, false, &trf("Remove {name}", &[("name", &b.name)])).clicked()
+                    {
+                        ui.data_mut(|d| d.insert_temp(confirm_id, b.name.clone()));
+                    }
+                    if app.state.backend.as_ref() == Some(&b.name) {
+                        widgets::pill(ui, "In use", t.on_accent, t.accent);
+                    }
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.add(egui::Label::new(RichText::new(&b.name).font(theme::semibold(theme::BODY))).truncate());
+                    });
+                });
+            });
+            {
+                {
                     let model_in_use = craft_anything_ai::model_in_use(b, app.backend_options.get(&b.name));
                     let live_catalog = b.kind == BackendKind::AgentCli && craft_anything_ai::cli_agents::adapter_for(&b.model).has_model_catalog();
                     // An API's model has its own line below; an agent app is named by its `model`.
@@ -384,7 +400,12 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                             ui.horizontal_wrapped(|ui| {
                                 ui.style_mut().override_font_id = Some(egui::FontId::proportional(theme::CAPTION));
                                 let text = trf("It isn't there any more, so {program} runs in its place.", &[("program", instead)]);
-                                ui.add(egui::Label::new(RichText::new(text).color(t.warning).size(theme::CAPTION)).wrap());
+                                ui.add(
+                                    egui::Label::new(
+                                        RichText::new(text).color(t.warning).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION))),
+                                    )
+                                    .wrap(),
+                                );
                                 let path = std::path::Path::new(instead);
                                 if path.parent().is_some_and(|p| !p.as_os_str().is_empty()) && widgets::link(ui, "Use it").clicked() {
                                     use_program = Some((b.name.clone(), instead.clone()));
@@ -573,8 +594,8 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                             tune_models.push(b.name.clone());
                         }
                     }
-                });
-            });
+                }
+            }
             // A key saved in the app silently wins over the environment's, so it can be replaced
             // here without removing the AI (#1358). Every API backend can need one; agent apps
             // sign in their own way. The field stays even when a key is saved, so a replacement
@@ -583,15 +604,9 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                 // A save or forget for this backend is still running: no later action may be
                 // submitted until it finishes, so workers can't overtake one another. Other
                 // backends keep their controls.
+                ui.add_space(theme::space::SM);
                 ui.add_enabled_ui(!app.backend_key_pending.contains(&b.name), |ui| {
-                    if app.backend_keys.as_ref().and_then(|keys| keys.get(&b.name).copied()) == Some(true) {
-                        ui.horizontal_wrapped(|ui| {
-                            widgets::pill(ui, "Key saved", t.success, t.raised);
-                            if widgets::secondary(ui, None, "Forget the key").clicked() {
-                                forget_key = Some(b.name.clone());
-                            }
-                        });
-                    }
+                    let saved = app.backend_keys.as_ref().and_then(|keys| keys.get(&b.name).copied()) == Some(true);
                     let key = key_drafts.entry(b.name.clone()).or_default();
                     ui.horizontal_wrapped(|ui| {
                         let r = ui.add(
@@ -607,16 +622,18 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                             // Keep the draft until the save succeeds; a failure must not lose it.
                             save_key = Some((b.name.clone(), k));
                         }
+                        if saved {
+                            widgets::pill(ui, "Key saved", t.success, t.raised);
+                            if widgets::ghost(ui, None, "Forget the key").clicked() {
+                                forget_key = Some(b.name.clone());
+                            }
+                        }
                     });
                 });
-                ui.add_space(theme::space::XS);
             }
-            ui.add_space(theme::space::SM);
+            ui.add_space(theme::space::MD);
             ui.horizontal_wrapped(|ui| {
-                ui.add_space(theme::space::XL);
-                if app.state.backend.as_ref() == Some(&b.name) {
-                    widgets::pill(ui, "In use", t.on_accent, t.accent);
-                } else if widgets::secondary(ui, None, "Use").clicked() {
+                if app.state.backend.as_ref() != Some(&b.name) && widgets::secondary(ui, None, "Use").clicked() {
                     pick = Some(b.name.clone());
                 }
                 // Who builds: the chosen one says so (click to go back to automatic).
@@ -666,11 +683,9 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                             remove = Some(b.name.clone());
                         }
                     });
-                    if widgets::link(ui, "Keep it").clicked() {
+                    if widgets::ghost(ui, None, "Keep it").clicked() {
                         ui.data_mut(|d| d.remove::<String>(confirm_id));
                     }
-                } else if icons::button(ui, "trash-2", theme::ControlSize::Small, false, &trf("Remove {name}", &[("name", &b.name)])).clicked() {
-                    ui.data_mut(|d| d.insert_temp(confirm_id, b.name.clone()));
                 }
             });
             if !b.enabled {
@@ -810,7 +825,9 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
             let mut left_ui =
                 ui.new_child(egui::UiBuilder::new().max_rect(top.with_max_x(text_right.max(top.left()))).layout(egui::Layout::top_down(egui::Align::Min)));
             left_ui.add(egui::Label::new(RichText::new(&d.suggestion.name).font(theme::medium(theme::SMALL))).wrap());
-            left_ui.add(egui::Label::new(RichText::new(&d.reason).color(t.text_faint).size(theme::CAPTION)).wrap());
+            left_ui.add(
+                egui::Label::new(RichText::new(&d.reason).color(t.text_faint).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION)))).wrap(),
+            );
             ui.advance_cursor_after_rect(left_ui.min_rect().union(right));
             // A subscription key is worth pasting even when the environment already has one, so a
             // different key can be used without restarting the app.

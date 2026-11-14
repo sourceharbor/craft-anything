@@ -150,7 +150,7 @@ pub(crate) fn menu(app: &mut CraftApp, ui: &mut Ui, root: &Path) {
         });
         ui.add_space(theme::space::XS);
         let note = tr("Default follows Auto mode: with it on, what can be undone goes ahead and the rest is refused; with it off, the builder asks.");
-        ui.add(egui::Label::new(RichText::new(note).size(theme::SMALL).color(t.text_faint)).wrap());
+        ui.add(egui::Label::new(RichText::new(note).size(theme::SMALL).line_height(Some(theme::leading(theme::SMALL))).color(t.text_faint)).wrap());
     });
     if let Some((kind, choice)) = picked {
         app.set_approval(root, kind, choice);

@@ -225,7 +225,8 @@ pub fn ghidra_modal(app: &mut CraftApp, ui: &mut Ui, close: &mut bool) {
         });
     });
     ui.add_space(theme::space::MD);
-    let body = |ui: &mut Ui, text: String| ui.add(egui::Label::new(RichText::new(text).size(theme::BODY)).wrap());
+    let body =
+        |ui: &mut Ui, text: String| ui.add(egui::Label::new(RichText::new(text).size(theme::BODY).line_height(Some(theme::leading(theme::BODY)))).wrap());
     let then = if app.ghidra.start_after.is_some() { tr("Your project starts as soon as it's done.") } else { String::new() };
     if ready {
         body(ui, tr("Deep mode now decompiles with Ghidra. The first look at a large program can take several minutes."));
@@ -846,7 +847,9 @@ pub fn modal(app: &mut CraftApp, ui: &mut Ui, b: Builder, close: &mut bool) {
             ui.vertical(|ui| {
                 ui.label(RichText::new(&s.title).font(theme::semibold(theme::BODY)).color(if s.done || now { t.text } else { t.text_dim }));
                 if now || !s.done {
-                    ui.add(egui::Label::new(RichText::new(&s.detail).color(t.text_dim).size(theme::SMALL)).wrap());
+                    ui.add(
+                        egui::Label::new(RichText::new(&s.detail).color(t.text_dim).size(theme::SMALL).line_height(Some(theme::leading(theme::SMALL)))).wrap(),
+                    );
                 }
                 if now {
                     ui.add_space(theme::space::SM);

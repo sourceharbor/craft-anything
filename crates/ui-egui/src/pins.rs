@@ -291,7 +291,7 @@ pub fn pin_modal(app: &mut CraftApp, ui: &mut Ui, close: &mut bool) {
             }
         }
     };
-    ui.add(egui::Label::new(RichText::new(note).color(color).size(theme::SMALL)).wrap());
+    ui.add(egui::Label::new(RichText::new(note).color(color).size(theme::SMALL).line_height(Some(theme::leading(theme::SMALL)))).wrap());
     ui.add_space(theme::space::MD);
     widgets::caption(ui, "Name (optional)");
     let r = ui.add(

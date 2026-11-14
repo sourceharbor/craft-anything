@@ -1064,7 +1064,7 @@ fn open_questions(app: &CraftApp, ui: &mut Ui) {
         for q in app.facts.open_questions.iter().take(SHOWN) {
             ui.horizontal_wrapped(|ui| {
                 icons::show(ui, "info", theme::icon::SM, t.text_dim);
-                ui.add(egui::Label::new(RichText::new(q).size(theme::SMALL).color(t.text)).wrap());
+                ui.add(egui::Label::new(RichText::new(q).size(theme::SMALL).line_height(Some(theme::leading(theme::SMALL))).color(t.text)).wrap());
             });
         }
         if app.facts.open_questions.len() > SHOWN {
@@ -1167,7 +1167,15 @@ fn steps(app: &CraftApp, ui: &mut Ui, ws: &Workspace) {
                 widgets::stat_row(ui, cost.label, &cost.value).on_hover_text(tip());
                 // Said outright, not only on hover: on a subscription this isn't what they pay.
                 if let Some(note) = cost.note {
-                    ui.add(egui::Label::new(RichText::new(tr(note)).color(Tokens::get(ui.ctx()).text_faint).size(theme::CAPTION)).wrap());
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(tr(note))
+                                .color(Tokens::get(ui.ctx()).text_faint)
+                                .size(theme::CAPTION)
+                                .line_height(Some(theme::leading(theme::CAPTION))),
+                        )
+                        .wrap(),
+                    );
                 }
             }
             if u.saved.tokens() > 0 || u.saved.tokens_incomplete {
@@ -1663,7 +1671,7 @@ fn claims_list(ui: &mut Ui, c: &CheckResult, t: &Tokens) {
     let row = |ui: &mut Ui, icon: &str, colour: Color32, text: String| {
         ui.horizontal_wrapped(|ui| {
             icons::show(ui, icon, theme::icon::SM, colour);
-            ui.add(egui::Label::new(RichText::new(text).size(theme::SMALL).color(colour)).wrap());
+            ui.add(egui::Label::new(RichText::new(text).size(theme::SMALL).line_height(Some(theme::leading(theme::SMALL))).color(colour)).wrap());
         });
     };
     for claim in c.claims.iter().filter(|x| !x.passed) {
@@ -1696,7 +1704,7 @@ fn check_card(app: &mut CraftApp, ui: &mut Ui, ctx: &egui::Context, ws: &Workspa
         });
         // The per-width measurements are for Advanced mode; a failed check's reason always shows.
         if !app.beginner() || c.similarity.is_none() {
-            ui.add(egui::Label::new(RichText::new(&c.note).color(t.text_dim).size(theme::CAPTION)).wrap());
+            ui.add(egui::Label::new(RichText::new(&c.note).color(t.text_dim).size(theme::CAPTION).line_height(Some(theme::leading(theme::CAPTION)))).wrap());
         }
         claims_list(ui, c, &t);
         // Several pages: each one's likeness; clicking one shows its pictures below.

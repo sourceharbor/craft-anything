@@ -136,7 +136,7 @@ pub fn show(ui: &mut Ui, text: &mut String, attachments: &[PathBuf], b: PromptBo
     let mut out = PromptOut::default();
     let id = ui.make_persistent_id(("prompt-box", b.name));
     let focused = ui.memory(|m| m.has_focus(id));
-    let stroke = egui::Stroke::new(1.0, if focused { t.text_faint } else { t.field_border });
+    let stroke = egui::Stroke::new(1.0, if focused { t.field_border } else { t.card_border });
     let frame = egui::Frame::new()
         .fill(t.card)
         .stroke(stroke)
