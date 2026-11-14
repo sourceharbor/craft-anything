@@ -375,6 +375,13 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
     let total: f32 = widths.iter().sum::<f32>() + 2.0 * pad;
     let (rect, _) = ui.allocate_exact_size(Vec2::new(total, height), Sense::hover());
     ui.painter().rect(rect, t.radius, t.raised, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
+    // The chosen segment's card slides to where it is now (from the switch's own left edge, so
+    // moving the whole switch doesn't set it off).
+    let before: f32 = widths.iter().take(selected).sum();
+    let slide = |part: &str, to: f32| ui.ctx().animate_value_with_time(ui.id().with(("seg-slide", part, options.first().copied())), to, SLIDE);
+    let (card_x, card_w) = (slide("x", before), slide("w", widths.get(selected).copied().unwrap_or_default()));
+    let card = egui::Rect::from_min_size(egui::pos2(rect.left() + pad + card_x, rect.top() + pad), Vec2::new(card_w, height - 2.0 * pad));
+    ui.painter().rect(card, t.radius_sm, t.card, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
     let mut x = rect.left() + pad;
     let mut picked = None;
     for (i, (g, w)) in galleys.into_iter().zip(widths).enumerate() {
@@ -382,9 +389,7 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
         let resp = ui.interact(seg, ui.id().with(("seg", options.get(i).copied().unwrap_or_default())), Sense::click());
         let on = i == selected;
         resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, on, tr(options.get(i).copied().unwrap_or_default())));
-        if on {
-            ui.painter().rect(seg, t.radius_sm, t.card, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
-        } else {
+        if !on {
             ui.painter().rect_filled(seg, t.radius_sm, theme::mix(Color32::TRANSPARENT, t.hover, hover_t(ui, &resp)));
         }
         let color = if on { t.text } else { t.text_dim };
@@ -398,6 +403,9 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
     }
     picked
 }
+
+/// How long the chosen segment's card takes to slide to another segment.
+const SLIDE: f32 = 0.16;
 
 /// The room around a segment's label, both sides together.
 fn segment_pad(text: f32) -> f32 {
