@@ -20,7 +20,7 @@ pub fn show(app: &mut CraftApp, ctx: &egui::Context) {
     // A modal (dimmed backdrop, Esc or a click outside closes) with a full-size close button;
     // egui's window close box is 14 px.
     let resp = egui::Modal::new(egui::Id::new("settings-window"))
-        .frame(egui::Frame::new().fill(t.card).corner_radius(t.r_lg()).inner_margin(theme::pad::ROOMY).stroke(egui::Stroke::new(1.0, t.card_border)))
+        .frame(egui::Frame::new().fill(t.card).corner_radius(t.r_lg()).inner_margin(theme::pad::CARD).stroke(egui::Stroke::new(1.0, t.card_border)))
         .show(ctx, |ui| {
             ui.set_width(680.0);
             ui.horizontal(|ui| {

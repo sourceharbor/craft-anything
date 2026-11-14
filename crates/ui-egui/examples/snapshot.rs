@@ -193,6 +193,30 @@ fn main() {
             },
         );
     }
+    // The title bar's Help menu, open.
+    if want("help-menu") {
+        render_then(
+            &out,
+            "help-menu",
+            w,
+            h,
+            scale,
+            || {
+                let mut a = demo::app(demo::engine(Mode::Beginner, true));
+                demo::fill_projects(&mut a);
+                a
+            },
+            |harness| {
+                use egui_kittest::kittest::Queryable as _;
+                harness.get_by_label("Help").click();
+                harness.step();
+                std::thread::sleep(std::time::Duration::from_millis(200));
+                for _ in 0..12 {
+                    harness.step();
+                }
+            },
+        );
+    }
     if want("palette") {
         render(&out, "palette", w, h, scale, || {
             let mut a = demo::app(demo::engine(Mode::Experienced, true));

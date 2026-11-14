@@ -152,11 +152,18 @@ pub fn show(app: &mut CraftApp, ui: &mut Ui) {
         }
         ui.label(theme::label_text("Craft Anything", theme::LABEL * s).color(t.text).strong());
         #[cfg(not(target_arch = "wasm32"))]
-        ui.menu_button(theme::label_text(&tr("Help"), theme::LABEL * s), |ui| {
-            if ui.button(tr("Check for Updates…")).clicked() {
-                app.updates.check(ui.ctx());
-                ui.close();
+        ui.scope(|ui| {
+            // Part of the bar: no box until the pointer is on it.
+            let w = &mut ui.visuals_mut().widgets;
+            for state in [&mut w.inactive, &mut w.hovered, &mut w.active, &mut w.open] {
+                state.bg_stroke = egui::Stroke::NONE;
             }
+            ui.menu_button(theme::label_text(&tr("Help"), theme::LABEL * s).color(t.text_dim), |ui| {
+                if widgets::menu_item(ui, false, tr("Check for Updates…")).clicked() {
+                    app.updates.check(ui.ctx());
+                    ui.close();
+                }
+            });
         });
         let in_project = app.state.screen == Screen::Project;
         let project = if in_project { app.workspace.as_ref().map(|w| w.manifest.name.clone()) } else { app.view.project.clone() };

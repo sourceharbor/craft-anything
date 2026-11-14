@@ -10,8 +10,8 @@ write a size, a padding or a colour as a number: a test in `theme.rs`
 
 | What | Names | Values |
 | --- | --- | --- |
-| Headings (DM Sans bold, `theme::heading`) | `TITLE`, `SECTION`, `CARD` | 26, 18, 16 |
-| Text (DM Sans regular, or medium through `theme::medium` / `label_text`) | `LEAD`, `BODY`, `SMALL`, `LABEL`, `CAPTION`, `TINY` | 17, 15, 14, 13, 12, 11 |
+| Headings (Figtree semibold, `theme::heading`) | `TITLE`, `SECTION`, `CARD` | 26, 18, 16 |
+| Text (Figtree regular, or medium through `theme::medium` / `label_text`) | `LEAD`, `BODY`, `SMALL`, `LABEL`, `CAPTION`, `TINY` | 17, 15, 14, 13, 12, 11 |
 | Code, paths and numbers (JetBrains Mono, `theme::mono`) | `CODE` | 12.5 |
 | Gaps (`ui.add_space`, item spacing) | `space::XXS` … `space::XXL` | 2, 4, 8, 12, 16, 24, 32 |
 | Padding inside frames | `pad::TIGHT`, `PANEL`, `CARD`, `ROOMY`, `ROW`, `BAR`, `CHIP`, `GUTTER`, `FIELD`, `FIELD_COMPACT` | built from the gaps |

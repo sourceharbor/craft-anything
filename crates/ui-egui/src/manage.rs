@@ -66,16 +66,21 @@ impl CraftApp {
 
 /// The right-click menu on a project in the sidebar.
 pub fn menu(app: &mut CraftApp, ui: &mut Ui, ws: &Workspace) {
-    if ui.button(tr("Rename…")).clicked() {
+    if widgets::menu_item(ui, false, tr("Rename…")).clicked() {
         ask_rename(app, ws);
         ui.close();
     }
-    if ui.button(tr("Duplicate")).clicked() {
+    if widgets::menu_item(ui, false, tr("Duplicate")).clicked() {
         app.duplicate_project(&ws.root);
         ui.close();
     }
     ui.separator();
-    if ui.add_enabled(!app.runs.is_busy(&ws.root), egui::Button::new(tr("Delete…"))).on_disabled_hover_text(tr("Pause the build first.")).clicked() {
+    if ui
+        .add_enabled_ui(!app.runs.is_busy(&ws.root), |ui| widgets::menu_item(ui, false, tr("Delete…")))
+        .inner
+        .on_disabled_hover_text(tr("Pause the build first."))
+        .clicked()
+    {
         app.state.modal = Some(Modal::Delete(ws.root.clone()));
         ui.close();
     }

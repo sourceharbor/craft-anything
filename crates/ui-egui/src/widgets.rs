@@ -85,17 +85,22 @@ fn popup_fade(ui: &Ui) -> f32 {
     0.35 + 0.65 * how
 }
 
-/// One row of a dropdown's list: a soft fill eases in under the pointer, and the chosen row has a
+/// One row of a dropdown's list or of a menu: a soft fill eases in under the pointer, and the chosen row has a
 /// tick at its end (so it doesn't rely on colour alone). `text` is shown as given.
 pub fn menu_item(ui: &mut Ui, selected: bool, text: impl Into<String>) -> Response {
     let t = Tokens::get(ui.ctx());
     let text = text.into();
     ui.set_opacity(popup_fade(ui));
+    // Rows sit close together, whatever list they are in.
+    ui.spacing_mut().item_spacing.y = theme::space::XXS;
     let size = ControlSize::Medium;
     let galley = ui.painter().layout_no_wrap(text.clone(), egui::FontId::proportional(size.text()), t.text);
     let tick = size.icon() + theme::space::SM;
     let wanted = galley.size().x + theme::space::SM * 2.0 + tick;
-    let (rect, resp) = ui.allocate_exact_size(Vec2::new(wanted.max(ui.available_width()), size.height()), Sense::click());
+    // As wide as the list, which is as wide as its widest row: while the list is being measured
+    // a row asks only for what it needs, or a menu would open at its widest.
+    let width = if ui.is_sizing_pass() { wanted } else { wanted.max(ui.available_width()) };
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(width, size.height()), Sense::click());
     let h = hover_t(ui, &resp);
     let fill = if resp.is_pointer_button_down_on() { t.pressed } else { theme::mix(Color32::TRANSPARENT, t.hover, h) };
     ui.painter().rect_filled(rect, t.radius_sm, fill);

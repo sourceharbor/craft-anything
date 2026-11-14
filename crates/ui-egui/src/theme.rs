@@ -1,13 +1,14 @@
 //! Design system: two themes (Studio dark, Studio Light), colour tokens, radii and type.
 //!
 //! A calm desktop look: neutral graphite (or near-white) surfaces, a slightly darker sidebar,
-//! lightly rounded cards and controls, sentence-case DM Sans throughout, and ink-filled main buttons.
+//! lightly rounded cards and controls, sentence-case Figtree throughout, and ink-filled main buttons.
 //! Indigo is the app colour for highlights, progress, links and selection.
 //! Widgets read [`Tokens::get`] instead of hard-coding colours, so a theme switch applies everywhere.
 //! Confidence has its own fixed palette so "how sure are we" reads the same in both themes.
 
 use craft_anything_engine::evidence::Confidence;
-use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Stroke, TextStyle, Visuals};
+use egui::epaint::text::VariationCoords;
+use egui::{Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, FontTweak, Stroke, TextStyle, Visuals};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -207,9 +208,10 @@ fn tokens_id() -> egui::Id {
 
 // ---- fonts -------------------------------------------------------------------------------------
 
-pub static DM_SANS_REGULAR: &[u8] = include_bytes!("../../../assets/fonts/DMSans-Regular.ttf");
-pub static DM_SANS_MEDIUM: &[u8] = include_bytes!("../../../assets/fonts/DMSans-Medium.ttf");
-pub static DM_SANS_BOLD: &[u8] = include_bytes!("../../../assets/fonts/DMSans-Bold.ttf");
+/// Figtree, a variable font: one file set to each weight used here.
+pub static FIGTREE: &[u8] = include_bytes!("../../../assets/fonts/Figtree-Variable.ttf");
+/// The faces cut from it: text, labels, and headings and emphasis.
+const FIGTREE_FACES: [(&str, f32); 3] = [("Figtree", 400.0), ("Figtree-Medium", 500.0), ("Figtree-SemiBold", 600.0)];
 pub static JETBRAINS_MONO: &[u8] = include_bytes!("../../../assets/fonts/JetBrainsMono-Regular.ttf");
 
 /// A font from the optional craft-fonts build input (empty unless built with `CRAFT_FONTS_DIR`).
@@ -223,17 +225,15 @@ pub struct CraftFont {
 
 include!(concat!(env!("OUT_DIR"), "/craft_fonts.rs"));
 
-/// Install DM Sans (three weights: body, labels and bold for headings; it has no static
-/// SemiBold), JetBrains Mono (code), plus any craft-fonts as fallbacks.
+/// Install Figtree (three weights: text, labels, and semibold for headings), JetBrains Mono
+/// (code), plus any craft-fonts as fallbacks.
 pub fn install_fonts(ctx: &egui::Context) {
     let mut fonts = FontDefinitions::default();
-    let mut add = |name: &str, bytes: &'static [u8]| {
-        fonts.font_data.insert(name.to_owned(), Arc::new(FontData::from_static(bytes)));
-    };
-    add("DMSans", DM_SANS_REGULAR);
-    add("DMSans-Medium", DM_SANS_MEDIUM);
-    add("DMSans-Bold", DM_SANS_BOLD);
-    add("JetBrainsMono", JETBRAINS_MONO);
+    for (name, weight) in FIGTREE_FACES {
+        let tweak = FontTweak { coords: VariationCoords::new([(*b"wght", weight)]), ..Default::default() };
+        fonts.font_data.insert(name.to_owned(), Arc::new(FontData::from_static(FIGTREE).tweak(tweak)));
+    }
+    fonts.font_data.insert("JetBrainsMono".to_owned(), Arc::new(FontData::from_static(JETBRAINS_MONO)));
     let mut fallbacks = Vec::new();
     let mut bold_fallbacks = Vec::new();
     for f in CRAFT_FONTS {
@@ -248,7 +248,7 @@ pub fn install_fonts(ctx: &egui::Context) {
     // Sans first: a mincho/serif fallback makes Japanese and Chinese UI text look like prose.
     let fallbacks = sans_first(fallbacks);
     let bold_fallbacks = sans_first(bold_fallbacks);
-    fonts.families.entry(FontFamily::Proportional).or_default().insert(0, "DMSans".to_owned());
+    fonts.families.entry(FontFamily::Proportional).or_default().insert(0, "Figtree".to_owned());
     fonts.families.entry(FontFamily::Monospace).or_default().insert(0, "JetBrainsMono".to_owned());
     for fam in [FontFamily::Proportional, FontFamily::Monospace] {
         fonts.families.entry(fam).or_default().extend(fallbacks.iter().cloned());
@@ -260,12 +260,12 @@ pub fn install_fonts(ctx: &egui::Context) {
     ctx.set_fonts(fonts);
 }
 
-/// The medium and semibold families: DM Sans' own weight first, then a script's bold face from
+/// The medium and semibold families: Figtree's own weight first, then a script's bold face from
 /// craft-fonts where it has one, then the whole proportional stack. Without the bold fallback a
 /// heading in Japanese or Chinese fell back to that script's regular face, so it looked lighter
 /// than the Latin beside it (#1808).
 fn weighted_families(base: &[String], bold: &[String]) -> Vec<(FontFamily, Vec<String>)> {
-    [("medium", "DMSans-Medium"), ("semibold", "DMSans-Bold")]
+    [("medium", "Figtree-Medium"), ("semibold", "Figtree-SemiBold")]
         .into_iter()
         .map(|(fam, primary)| {
             let mut stack = vec![primary.to_owned()];
@@ -321,7 +321,7 @@ pub fn semibold(size: f32) -> FontId {
     FontId::new(size, FontFamily::Name("semibold".into()))
 }
 /// The type scale: every text size in the interface is one of these.
-/// Headings (`heading`, DM Sans bold), largest first: a screen's title, a step or a dialog's
+/// Headings (`heading`, Figtree semibold), largest first: a screen's title, a step or a dialog's
 /// title, a card's or a list item's title.
 pub const TITLE: f32 = 26.0;
 pub const SECTION: f32 = 18.0;
@@ -439,7 +439,7 @@ impl ControlSize {
     }
 }
 
-/// A heading: DM Sans bold, at one of the heading sizes above.
+/// A heading: Figtree semibold, at one of the heading sizes above.
 pub fn heading(text: impl Into<String>, size: f32) -> egui::RichText {
     egui::RichText::new(text).font(semibold(size))
 }
@@ -459,7 +459,7 @@ pub fn mix(a: Color32, b: Color32, t: f32) -> Color32 {
     Color32::from_rgba_premultiplied(m(a.r(), b.r()), m(a.g(), b.g()), m(a.b(), b.b()), m(a.a(), b.a()))
 }
 
-/// A short label (captions, buttons, the title bar): DM Sans medium at one of the text sizes.
+/// A short label (captions, buttons, the title bar): Figtree medium at one of the text sizes.
 pub fn label_text(text: &str, size: f32) -> egui::RichText {
     egui::RichText::new(text).font(medium(size))
 }
@@ -851,7 +851,7 @@ mod tests {
     }
 
     /// Releases are built with craft-fonts (#19), and so is CI; a build without them has only
-    /// DM Sans, and shows other scripts as boxes.
+    /// Figtree, and shows other scripts as boxes.
     #[test]
     fn with_craft_fonts_every_script_people_type_shows() {
         if CRAFT_FONTS.is_empty() {
@@ -896,17 +896,17 @@ mod tests {
     /// Japanese or Chinese headings aren't lighter than the Latin beside them.
     #[test]
     fn a_heading_takes_a_scripts_bold_face_before_its_regular_one() {
-        let base = vec!["DMSans".to_string(), "craft:japanese:regular".to_string()];
+        let base = vec!["Figtree".to_string(), "craft:japanese:regular".to_string()];
         let bold = vec!["craft:japanese:bold".to_string()];
         let families = weighted_families(&base, &bold);
         let stack = |name: &str| {
             families.iter().find(|(f, _)| f == &FontFamily::Name(name.into())).map(|(_, s)| s.clone()).unwrap_or_else(|| panic!("{name} is installed"))
         };
-        assert_eq!(stack("semibold"), ["DMSans-Bold", "craft:japanese:bold", "DMSans", "craft:japanese:regular"]);
-        assert_eq!(stack("medium"), ["DMSans-Medium", "craft:japanese:bold", "DMSans", "craft:japanese:regular"]);
+        assert_eq!(stack("semibold"), ["Figtree-SemiBold", "craft:japanese:bold", "Figtree", "craft:japanese:regular"]);
+        assert_eq!(stack("medium"), ["Figtree-Medium", "craft:japanese:bold", "Figtree", "craft:japanese:regular"]);
         // Without a bold face the stack is what it always was.
         let regular_only = weighted_families(&base, &[]);
-        assert_eq!(regular_only[1].1, ["DMSans-Bold", "DMSans", "craft:japanese:regular"]);
+        assert_eq!(regular_only[1].1, ["Figtree-SemiBold", "Figtree", "craft:japanese:regular"]);
     }
 
     #[test]

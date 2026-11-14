@@ -203,36 +203,36 @@ pub fn section(app: &mut CraftApp, ui: &mut Ui, fold: bool) {
 /// The right-click menu on a pin.
 fn menu(app: &mut CraftApp, ui: &mut Ui, row: &PinRow) {
     if row.running {
-        if ui.button(tr("Open another copy")).on_hover_text(tr("Copies share the files it saves beside itself.")).clicked() {
+        if widgets::menu_item(ui, false, tr("Open another copy")).on_hover_text(tr("Copies share the files it saves beside itself.")).clicked() {
             app.open_pin(row, true);
             ui.close();
         }
-        if ui.button(tr("Close it")).clicked() {
+        if widgets::menu_item(ui, false, tr("Close it")).clicked() {
             app.stop_pin(row);
             ui.close();
         }
-    } else if ui.button(tr("Open")).clicked() {
+    } else if widgets::menu_item(ui, false, tr("Open")).clicked() {
         app.open_pin(row, false);
         ui.close();
     }
     // The project page's words for the same action.
-    if ui.button(tr("Open folder")).clicked() {
+    if widgets::menu_item(ui, false, tr("Open folder")).clicked() {
         app.act("project_open_folder", json!({"project": row.project, "pin": row.pin.id}), tr("Open the folder"));
         ui.close();
     }
-    if ui.button(tr("Go to the project")).clicked() {
+    if widgets::menu_item(ui, false, tr("Go to the project")).clicked() {
         if let Some(ws) = app.projects.iter().find(|w| w.root == row.project).cloned() {
             app.open_workspace(ws);
         }
         ui.close();
     }
-    if ui.button(tr("Rename…")).clicked() {
+    if widgets::menu_item(ui, false, tr("Rename…")).clicked() {
         app.state.rename_input = row.pin.name.clone();
         app.state.modal = Some(Modal::PinRename(row.project.clone(), row.pin.id));
         ui.close();
     }
     ui.separator();
-    if ui.add_enabled(!row.running, egui::Button::new(tr("Remove…"))).on_disabled_hover_text(tr("Close it first.")).clicked() {
+    if ui.add_enabled_ui(!row.running, |ui| widgets::menu_item(ui, false, tr("Remove…"))).inner.on_disabled_hover_text(tr("Close it first.")).clicked() {
         app.state.modal = Some(Modal::PinDelete(row.project.clone(), row.pin.id));
         ui.close();
     }
