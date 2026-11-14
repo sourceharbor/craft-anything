@@ -1523,9 +1523,9 @@ Gaps found while using the app for real projects.
       switcher in every README (#831)
 - [x] A Thai README (`README.th.md`) translated from `README.md` and linked from the language
       switcher in every README
-- [ ] Vietnamese letters with stacked marks (ạ ả ấ ế ơ ư ữ…) aren't in the bundled DM Sans or egui's
+- [ ] Vietnamese letters with stacked marks (ạ ả ấ ế ơ ư ữ…) aren't in the bundled Figtree or egui's
       default fonts: without craft-fonts they show as boxes, and with it each such letter comes from
-      Noto Sans CJK while the rest of the word is DM Sans. Bundle a DM Sans build that has the
+      Noto Sans CJK while the rest of the word is Figtree. Bundle a build of the text font that has the
       Vietnamese set (with its OFL notice) so Tiếng Việt renders in one face
 - [x] A build told craft-fonts are required (`CRAFT_FONTS_REQUIRED=1`) finished with none
       embedded when `CRAFT_FONTS_DIR` was missing: the build script read the switch only when the
@@ -1649,13 +1649,19 @@ Gaps found while using the app for real projects.
       control sizes) in `theme.rs`, one set of buttons (primary, secondary, ghost, danger),
       switches and fields in `widgets.rs`, and every screen moved onto them, so sizes and spacing
       stop differing from screen to screen; a test keeps literal sizes, paddings and colours out
-      of the screens (`docs/design-system.md`). Checked on every snapshot scene in both themes
-      and in the app on Windows; not on macOS or Linux
+      of the screens (`docs/design-system.md`). With it: Figtree for text; corners of 4, 6 and 8;
+      fields and buttons a shade lighter than their card, with one soft edge; dropdowns, menus
+      and the project's side panel as lists of rows; messages in the title bar; a sliding
+      segmented switch; sharper small text and a wheel step of 100 points. Checked on every
+      snapshot scene in both themes and in the app on Windows; not on macOS or Linux
       — claimed: bflatastic, branch refactor/ui-design-system
 - [ ] Design system, left for later: links come in two sizes (`widgets::link` follows the text
       around it); the title bar keeps its own control height (30, or 26 on macOS) instead of a
       `ControlSize`; frames with four different sides (prompt box, sidebar, workbench rails)
-      still write their padding where it is used
+      still write their padding where it is used; the macOS disk image's background is still
+      drawn in DM Sans and JetBrains Mono; dropdowns have no name for screen readers, only
+      their value; fields and dropdowns have no 3:1 border at rest (WCAG 1.4.11), by choice,
+      which wants a second look; a compact field is about a point taller than a button
 
 ### R2.10 Pinned builds
 Owner: maintainers · Status: in progress
