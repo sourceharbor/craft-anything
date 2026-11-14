@@ -1928,7 +1928,8 @@ fn questions_switch(app: &mut CraftApp, ui: &mut Ui) {
     let title = widgets::label_galley(ui, &tr(QUESTIONS_TITLE), theme::SMALL, t.text_dim).size().x;
     // The approvals menu's link, the space before it and one more item gap.
     let approvals = widgets::label_galley(ui, &tr("Approvals"), theme::BODY, t.text).size().x + 8.0;
-    let gaps = ui.spacing().item_spacing.x * 4.0;
+    // Room for the gaps and for enough of the hint to read: squeezed to nothing it sat on the title.
+    let gaps = ui.spacing().item_spacing.x * 4.0 + theme::space::XXL;
     let title = title + approvals;
     // Side by side when both switches fit, else one under the other (a longer language, a narrow window).
     let fits =

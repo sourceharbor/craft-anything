@@ -1,7 +1,7 @@
 //! Design system: two themes (Studio dark, Studio Light), colour tokens, radii and type.
 //!
 //! A calm desktop look: neutral graphite (or near-white) surfaces, a slightly darker sidebar,
-//! soft rounded cards and controls, sentence-case DM Sans throughout, and ink-filled main buttons.
+//! lightly rounded cards and controls, sentence-case DM Sans throughout, and ink-filled main buttons.
 //! Indigo is the app colour for highlights, progress, links and selection.
 //! Widgets read [`Tokens::get`] instead of hard-coding colours, so a theme switch applies everywhere.
 //! Confidence has its own fixed palette so "how sure are we" reads the same in both themes.
@@ -137,9 +137,9 @@ impl Tokens {
                 warning: BEST_GUESS,
                 success: Color32::from_rgb(0x5b, 0xbf, 0x8f),
                 code_bg: Color32::from_rgb(0x06, 0x06, 0x07),
-                radius_sm: 6.0,
-                radius: 8.0,
-                radius_lg: 12.0,
+                radius_sm: RADIUS_SM,
+                radius: RADIUS,
+                radius_lg: RADIUS_LG,
             },
             // getartcraft.com's light: warm paper (#f2f1ee), its sunken #e9e8e4 for the sidebar,
             // raised #faf9f7 for cards, ink #101014.
@@ -169,9 +169,9 @@ impl Tokens {
                 warning: Color32::from_rgb(0x9a, 0x67, 0x00),
                 success: Color32::from_rgb(0x12, 0x75, 0x36),
                 code_bg: Color32::from_rgb(0xe9, 0xe8, 0xe4),
-                radius_sm: 6.0,
-                radius: 8.0,
-                radius_lg: 12.0,
+                radius_sm: RADIUS_SM,
+                radius: RADIUS,
+                radius_lg: RADIUS_LG,
             },
         }
     }
@@ -195,6 +195,11 @@ impl Tokens {
         CornerRadius::same(self.radius_lg as u8)
     }
 }
+
+/// Corners: tags and segments, controls and fields, cards and dialogs. Rounded, but only just.
+const RADIUS_SM: f32 = 4.0;
+const RADIUS: f32 = 6.0;
+const RADIUS_LG: f32 = 8.0;
 
 fn tokens_id() -> egui::Id {
     egui::Id::new("craft-anything-theme")

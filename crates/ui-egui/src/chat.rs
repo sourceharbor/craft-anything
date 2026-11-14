@@ -246,6 +246,12 @@ pub fn conversation(app: &mut CraftApp, ui: &mut Ui, dense: bool) {
         composer(app, ui, max_w, dense);
     });
     remember_composer_height(ui, comp_id, comp_h, r.response.rect.height());
+    // A guess that was too tall leaves room under the box on that first frame; fill it, or the
+    // console's panel shrinks by that much and keeps the size.
+    let left = ui.available_height();
+    if left > 0.0 {
+        ui.add_space(left);
+    }
 }
 
 /// Keep the prompt box's height for the next frame's layout. When it changed (a line added or

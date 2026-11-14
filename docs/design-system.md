@@ -16,7 +16,7 @@ write a size, a padding or a colour as a number: a test in `theme.rs`
 | Gaps (`ui.add_space`, item spacing) | `space::XXS` … `space::XXL` | 2, 4, 8, 12, 16, 24, 32 |
 | Padding inside frames | `pad::TIGHT`, `PANEL`, `CARD`, `ROOMY`, `ROW`, `BAR`, `CHIP`, `GUTTER`, `FIELD`, `FIELD_COMPACT` | built from the gaps |
 | Icons | `icon::XS` … `icon::XXL` | 12, 14, 16, 20, 24, 32 |
-| Corners | `Tokens::radius_sm`, `radius`, `radius_lg` | 6 (tags, segments), 8 (controls, fields), 12 (cards, dialogs) |
+| Corners | `Tokens::radius_sm`, `radius`, `radius_lg` | 4 (tags, segments), 6 (controls, fields), 8 (cards, dialogs) |
 | Colours | `Tokens` (`Tokens::get(ctx)`) | one set per theme; contrast is tested |
 
 `TINY` is for the Advanced workbench's dense lists; everything else is 12 pt or more.
