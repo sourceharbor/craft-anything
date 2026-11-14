@@ -1982,6 +1982,7 @@ impl CraftApp {
         settings_ui::show(self, &ctx);
         home::modals(self, &ctx);
         self.toasts(&ctx);
+        widgets::text_focus_ring(&ctx);
         self.drop_overlay(&ctx);
         titlebar::window_edge(&ctx);
         titlebar::resize_edges(&ctx);

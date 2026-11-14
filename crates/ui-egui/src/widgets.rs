@@ -217,6 +217,40 @@ pub fn focus_ring(ui: &Ui, resp: &Response, rect: egui::Rect) {
     }
 }
 
+/// How long a focus edge takes to fade in or out.
+pub const FOCUS_FADE: f32 = 0.12;
+
+/// A text field with no box of its own (it sits in a bigger one that shows focus itself): the
+/// ring [`text_focus_ring`] draws would hug its bare text, so it gets none.
+pub fn frameless_field(resp: &Response) {
+    resp.ctx.data_mut(|d| d.insert_temp(resp.id.with("frameless-field"), true));
+}
+
+/// The focus edge of whichever text field is being typed in: the same hairline and halo as
+/// [`focus_ring`], faded in and out. Drawn once a frame, after the screens, because a field's
+/// own frame can't know it has focus.
+pub fn text_focus_ring(ctx: &egui::Context) {
+    let key = egui::Id::new("text-focus-ring");
+    let focused =
+        ctx.memory(|m| m.focused()).filter(|id| ctx.text_edit_focused() && !ctx.data(|d| d.get_temp::<bool>(id.with("frameless-field")).unwrap_or(false)));
+    // The field that had it last fades out.
+    let Some(id) = focused.or_else(|| ctx.data(|d| d.get_temp::<egui::Id>(key))) else { return };
+    let how = ctx.animate_bool_with_time(id.with("focus-ring"), focused == Some(id), FOCUS_FADE);
+    match focused {
+        Some(now) => {
+            ctx.data_mut(|d| d.insert_temp(key, now));
+        }
+        None if how <= 0.0 => ctx.data_mut(|d| d.remove::<egui::Id>(key)),
+        None => {}
+    }
+    let Some(resp) = ctx.read_response(id).filter(|_| how > 0.0) else { return };
+    let t = Tokens::get(ctx);
+    // Clipped to what the field's own layer shows of it (a field half scrolled out of a list).
+    let painter = ctx.layer_painter(resp.layer_id).with_clip_rect(resp.interact_rect.expand(4.0));
+    painter.rect_stroke(resp.rect, t.radius, Stroke::new(3.0, t.accent_ink.gamma_multiply(0.45 * how)), egui::StrokeKind::Outside);
+    painter.rect_stroke(resp.rect, t.radius, Stroke::new(1.0, t.accent_ink.gamma_multiply(how)), egui::StrokeKind::Inside);
+}
+
 /// A card frame: a soft rounded box with a hairline edge.
 pub fn card(t: &Tokens) -> Frame {
     Frame::new().fill(t.card).stroke(Stroke::new(1.0, t.card_border)).corner_radius(t.r_lg()).inner_margin(theme::pad::CARD)
@@ -374,38 +408,46 @@ pub fn segmented_scaled(ui: &mut Ui, options: &[&str], selected: usize, height: 
     let widths: Vec<f32> = galleys.iter().map(|g| g.size().x + segment_pad(text) * scale).collect();
     let total: f32 = widths.iter().sum::<f32>() + 2.0 * pad;
     let (rect, _) = ui.allocate_exact_size(Vec2::new(total, height), Sense::hover());
-    ui.painter().rect(rect, t.radius, t.raised, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
-    // The chosen segment's card slides to where it is now (from the switch's own left edge, so
-    // moving the whole switch doesn't set it off).
-    let before: f32 = widths.iter().take(selected).sum();
-    let slide = |part: &str, to: f32| ui.ctx().animate_value_with_time(ui.id().with(("seg-slide", part, options.first().copied())), to, SLIDE);
-    let (card_x, card_w) = (slide("x", before), slide("w", widths.get(selected).copied().unwrap_or_default()));
-    let card = egui::Rect::from_min_size(egui::pos2(rect.left() + pad + card_x, rect.top() + pad), Vec2::new(card_w, height - 2.0 * pad));
-    ui.painter().rect(card, t.radius_sm, t.card, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
+    // A sunken track; the chosen segment is a lighter card on it.
+    ui.painter().rect(rect, t.radius, t.canvas, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
+    // The segments, and a soft fill under the pointer on the ones that aren't chosen.
     let mut x = rect.left() + pad;
-    let mut picked = None;
-    for (i, (g, w)) in galleys.into_iter().zip(widths).enumerate() {
-        let seg = egui::Rect::from_min_size(egui::pos2(x, rect.top() + pad), Vec2::new(w, height - 2.0 * pad));
-        let resp = ui.interact(seg, ui.id().with(("seg", options.get(i).copied().unwrap_or_default())), Sense::click());
+    let mut segments = Vec::with_capacity(options.len());
+    for (i, w) in widths.iter().enumerate() {
+        let seg = egui::Rect::from_min_size(egui::pos2(x, rect.top() + pad), Vec2::new(*w, height - 2.0 * pad));
+        let name = options.get(i).copied().unwrap_or_default();
+        let resp = ui.interact(seg, ui.id().with(("seg", name)), Sense::click());
         let on = i == selected;
-        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, on, tr(options.get(i).copied().unwrap_or_default())));
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, on, tr(name)));
         if !on {
             ui.painter().rect_filled(seg, t.radius_sm, theme::mix(Color32::TRANSPARENT, t.hover, hover_t(ui, &resp)));
         }
-        let color = if on { t.text } else { t.text_dim };
-        ui.painter().galley_with_override_text_color(seg.center() - g.size() / 2.0, g, color);
+        segments.push((seg, resp));
+        x += w;
+    }
+    // The card slides to the chosen segment, over those fills (measured from the switch's own
+    // left edge, so moving the whole switch doesn't set it off). Named by its options, not by
+    // where it is drawn, so it keeps its place when the screen around it changes.
+    let before: f32 = widths.iter().take(selected).sum();
+    let slide = |part: &str, to: f32| ui.ctx().animate_value_with_time(egui::Id::new(("seg-slide", part, options)), to, SLIDE);
+    let (card_x, card_w) = (slide("x", before), slide("w", widths.get(selected).copied().unwrap_or_default()));
+    let card = egui::Rect::from_min_size(egui::pos2(rect.left() + pad + card_x, rect.top() + pad), Vec2::new(card_w, height - 2.0 * pad));
+    ui.painter().rect(card, t.radius_sm, t.field, Stroke::new(scale, t.card_border), egui::StrokeKind::Inside);
+    let mut picked = None;
+    for (i, ((seg, resp), g)) in segments.into_iter().zip(galleys).enumerate() {
+        let on = i == selected;
+        ui.painter().galley_with_override_text_color(seg.center() - g.size() / 2.0, g, if on { t.text } else { t.text_dim });
         focus_ring(ui, &resp, seg);
         let resp = if on { resp } else { resp.on_hover_cursor(egui::CursorIcon::PointingHand) };
         if resp.clicked() && !on {
             picked = Some(i);
         }
-        x += w;
     }
     picked
 }
 
 /// How long the chosen segment's card takes to slide to another segment.
-const SLIDE: f32 = 0.16;
+const SLIDE: f32 = 0.2;
 
 /// The room around a segment's label, both sides together.
 fn segment_pad(text: f32) -> f32 {

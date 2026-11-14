@@ -128,6 +128,7 @@ pub fn show(app: &mut CraftApp, ctx: &egui::Context) {
                             .desired_width(f32::INFINITY)
                             .font(egui::FontId::proportional(theme::BODY)),
                     );
+                    widgets::frameless_field(&r);
                     r.request_focus();
                     if r.changed() {
                         app.state.palette.selected = 0;

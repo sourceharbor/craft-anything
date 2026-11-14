@@ -85,7 +85,9 @@ pub fn show(app: &mut CraftApp, ctx: &egui::Context) {
                         }
                     }
                 });
+                ui.add_space(theme::space::SM);
                 ui.separator();
+                ui.add_space(theme::space::LG);
                 ui.vertical(|ui| {
                     // Exactly what's left of the window, with room for the scroll bar a long tab
                     // gets, so no tab can widen the window (#68).

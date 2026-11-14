@@ -136,7 +136,9 @@ pub fn show(ui: &mut Ui, text: &mut String, attachments: &[PathBuf], b: PromptBo
     let mut out = PromptOut::default();
     let id = ui.make_persistent_id(("prompt-box", b.name));
     let focused = ui.memory(|m| m.has_focus(id));
-    let stroke = egui::Stroke::new(1.0, if focused { t.field_border } else { t.card_border });
+    // The edge firms up as the box is typed in, eased like every other state.
+    let how = ui.ctx().animate_bool_with_time(id.with("focus-edge"), focused, widgets::FOCUS_FADE);
+    let stroke = egui::Stroke::new(1.0, crate::theme::mix(t.card_border, t.field_border, how));
     let frame = egui::Frame::new()
         .fill(t.field)
         .stroke(stroke)
@@ -242,6 +244,7 @@ pub fn show(ui: &mut Ui, text: &mut String, attachments: &[PathBuf], b: PromptBo
                             ..egui::EventFilter::default()
                         }),
                 );
+                widgets::frameless_field(&r);
                 widgets::named(r.clone(), b.name);
                 if r.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter) && !i.modifiers.shift) && !text.trim().is_empty() {
                     out.send = true;
