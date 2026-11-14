@@ -160,7 +160,10 @@ pub fn show(app: &mut CraftApp, ui: &mut Ui) {
         let project = if in_project { app.workspace.as_ref().map(|w| w.manifest.name.clone()) } else { app.view.project.clone() };
         let target = if in_project { None } else { app.view.active_target().map(|t| (t.name.clone(), t.kind)) };
         if project.is_some() || target.is_some() {
+            // Room either side of the divider, so the app's name and what's open read apart.
+            ui.add_space(theme::space::XS * s);
             rule(ui);
+            ui.add_space(theme::space::XS * s);
         }
         if let Some(p) = project {
             ui.label(theme::label_text(&p, theme::LABEL * s).color(t.text_dim));
