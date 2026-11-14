@@ -74,7 +74,7 @@ pub fn show(app: &mut CraftApp, ctx: &egui::Context) {
                             egui::pos2(rect.left() + 36.0, rect.center().y),
                             egui::Align2::LEFT_CENTER,
                             tr(title),
-                            theme::medium(theme::SMALL),
+                            theme::medium(theme::BODY),
                             if on { t.text } else { t.text_dim },
                         );
                         if r.clicked() {
@@ -123,7 +123,7 @@ fn row(ui: &mut Ui, title: &str, sub: &str, add: impl FnOnce(&mut Ui)) {
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.set_width(220.0);
-            ui.label(RichText::new(tr(title)).font(theme::medium(theme::SMALL)));
+            ui.label(RichText::new(tr(title)).font(theme::medium(theme::BODY)));
             if !sub.is_empty() {
                 ui.add(egui::Label::new(RichText::new(tr(sub)).color(t.text_faint).size(theme::CAPTION)).wrap());
             }
@@ -477,14 +477,13 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                         }
                     } else if let Some(current) = model_in_use {
                         ui.horizontal_wrapped(|ui| {
-                            ui.style_mut().override_font_id = Some(egui::FontId::proportional(theme::CAPTION));
                             ui.add(
                                 egui::Label::new(RichText::new(trf("Model: {model}", &[("model", &current)])).color(t.text_faint).size(theme::CAPTION))
                                     .truncate(),
                             );
                             match app.model_picker.as_ref().filter(|(n, _)| *n == b.name) {
                                 None => {
-                                    if widgets::link(ui, "Change…").clicked() {
+                                    if widgets::caption_link(ui, "Change…").clicked() {
                                         pick_model = Some(b.name.clone());
                                     }
                                 }
@@ -509,12 +508,12 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                                         .add(egui::TextEdit::singleline(&mut other).desired_width(140.0).frame(widgets::text_field_frame_compact(&t)))
                                         .labelled_by(label.id);
                                     let entered = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                                    if (widgets::link(ui, "Use").clicked() || entered) && !other.trim().is_empty() && other.trim() != current {
+                                    if (widgets::caption_link(ui, "Use").clicked() || entered) && !other.trim().is_empty() && other.trim() != current {
                                         chosen_model = Some((b.name.clone(), other.trim().to_string()));
                                         other.clear();
                                     }
                                     ui.data_mut(|d| d.insert_temp(id, other));
-                                    if widgets::link(ui, "Cancel").clicked() {
+                                    if widgets::caption_link(ui, "Cancel").clicked() {
                                         close_picker = true;
                                     }
                                 }
@@ -548,9 +547,9 @@ fn ai(app: &mut CraftApp, ui: &mut Ui) {
                                             .map(|choice| tr(&choice.label))
                                             .unwrap_or_else(|| tr("Default"));
                                         widgets::dropdown(("model-context", &b.name)).selected_text(label).show_ui(ui, |ui| {
-                                            changed |= ui.selectable_value(&mut draft.context, None, tr("Default")).changed();
+                                            changed |= widgets::menu_choice(ui, &mut draft.context, None, tr("Default"));
                                             for choice in &choices.context {
-                                                changed |= ui.selectable_value(&mut draft.context, Some(choice.value), tr(&choice.label)).changed();
+                                                changed |= widgets::menu_choice(ui, &mut draft.context, Some(choice.value), tr(&choice.label));
                                             }
                                         });
                                     });

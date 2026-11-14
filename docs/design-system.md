@@ -29,7 +29,7 @@ controls of one size always line up.
 | Size | Height | Label | Icon | Used for |
 | --- | --- | --- | --- | --- |
 | `Small` | 24 | `LABEL` | 14 | toolbars, rows of a list, the workbench |
-| `Medium` (default) | 32 | `SMALL` | 16 | buttons, switches, combo boxes, compact fields |
+| `Medium` (default) | 32 | `BODY` | 16 | buttons, switches, combo boxes, compact fields |
 | `Large` | 40 | `BODY` | 16 | a screen's main switch, full text fields |
 | `Hero` | 48 | `CARD` | 20 | the one action a screen is for (Start) |
 

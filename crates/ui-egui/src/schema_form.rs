@@ -152,10 +152,10 @@ pub fn show(ui: &mut Ui, fields: &[Field], values: &mut BTreeMap<String, String>
                     _ if !f.choices.is_empty() => {
                         widgets::dropdown(("choice", &f.name)).selected_text(if v.is_empty() { "—".to_string() } else { v.clone() }).show_ui(ui, |ui| {
                             if !f.required {
-                                ui.selectable_value(v, String::new(), "—");
+                                widgets::menu_choice(ui, v, String::new(), "—");
                             }
                             for c in &f.choices {
-                                ui.selectable_value(v, c.clone(), c);
+                                widgets::menu_choice(ui, v, c.clone(), c);
                             }
                         });
                     }

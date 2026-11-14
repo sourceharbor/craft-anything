@@ -115,6 +115,16 @@ pub fn menu_item(ui: &mut Ui, selected: bool, text: impl Into<String>) -> Respon
     resp.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
+/// A [`menu_item`] that sets `current` to `value` when picked. True when that changed it.
+pub fn menu_choice<V: PartialEq>(ui: &mut Ui, current: &mut V, value: V, text: impl Into<String>) -> bool {
+    let on = *current == value;
+    let picked = menu_item(ui, on, text).clicked() && !on;
+    if picked {
+        *current = value;
+    }
+    picked
+}
+
 /// The dropdown arrow for every combo box: a Lucide chevron instead of egui's filled triangle.
 pub fn combo_icon(ui: &Ui, rect: egui::Rect, _visuals: &egui::style::WidgetVisuals, _open: bool) {
     icons::paint(ui, rect.expand(2.0), "chevron-down", theme::icon::SM, Tokens::get(ui.ctx()).icon);
@@ -337,6 +347,15 @@ pub fn link(ui: &mut Ui, label: &str) -> Response {
         ui.painter().hline(r.rect.x_range(), y, Stroke::new(1.0, t.accent_ink));
     }
     r
+}
+
+/// A [`link`] at the size of the caption it sits in.
+pub fn caption_link(ui: &mut Ui, label: &str) -> Response {
+    ui.scope(|ui| {
+        ui.style_mut().override_font_id = Some(egui::FontId::proportional(theme::CAPTION));
+        link(ui, label)
+    })
+    .inner
 }
 
 /// A segmented switch; the selected segment is a raised card on a sunken track. Returns the newly

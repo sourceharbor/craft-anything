@@ -415,8 +415,8 @@ impl ControlSize {
     pub const fn text(self) -> f32 {
         match self {
             ControlSize::Small => LABEL,
-            ControlSize::Medium => SMALL,
-            ControlSize::Large => BODY,
+            // The size of the text around it, and of what is typed into a field beside it.
+            ControlSize::Medium | ControlSize::Large => BODY,
             ControlSize::Hero => CARD,
         }
     }
@@ -562,7 +562,7 @@ pub fn apply(ctx: &egui::Context, kind: ThemeKind, roomy: bool) {
         s.spacing.item_spacing = egui::vec2(space::SM, if roomy { space::SM } else { space::XS });
         // Padding that brings a line of the label up to the control's height; a row of plain text
         // stays as tall as a small control.
-        let pad_y = ((control.height() - control.text() * 1.3) / 2.0).ceil();
+        let pad_y = ((control.height() - control.text() * 1.2) / 2.0).round();
         s.spacing.button_padding = egui::vec2(if roomy { space::MD } else { space::SM }, pad_y);
         s.spacing.interact_size = egui::Vec2::splat(ControlSize::Small.height());
         s.spacing.menu_margin = pad::MENU;
@@ -694,7 +694,7 @@ mod tests {
         let icons = [icon::XS, icon::SM, icon::MD, icon::LG, icon::XL, icon::XXL];
         for pair in ControlSize::ALL.windows(2) {
             assert_eq!(pair[1].height() - pair[0].height(), space::SM, "{pair:?}");
-            assert!(pair[1].text() > pair[0].text() && pair[1].pad_x() >= pair[0].pad_x() && pair[1].icon() >= pair[0].icon(), "{pair:?}");
+            assert!(pair[1].text() >= pair[0].text() && pair[1].pad_x() >= pair[0].pad_x() && pair[1].icon() >= pair[0].icon(), "{pair:?}");
         }
         for size in ControlSize::ALL {
             assert!(texts.contains(&size.text()) && icons.contains(&size.icon()), "{size:?}");
