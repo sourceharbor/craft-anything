@@ -94,10 +94,10 @@ given.
   (`theme::scroll_style`); the thumb keeps 3:1 against every surface.
 - **Lists that open.** A dropdown's list and a menu fade in (`POPUP_FADE`), show about nine rows
   before they scroll, and are as wide as their widest row.
-- **Messages.** A message to the person (`CraftApp::toast`) shows as a compact card in the
-  middle of the title bar, the one place with nothing to press under it. One line fits inside
-  the bar; a longer message grows down from it. A new confirmation takes the place of the one
-  before it; errors stay until dismissed.
+- **Messages.** A message to the person (`CraftApp::toast`) shows as a compact card under the
+  title bar, in the middle. The card lets clicks through to what is under it; only its close
+  button takes one. A confirmation goes away by itself, and a new one takes the place of the
+  one before it. Errors stay until dismissed.
 - **Text.** Glyphs sit on whole pixels (`subpixel_binning` is off), which keeps small text
   sharp on a display at 100 %.
 - **The window.** Without a native frame the app draws a 1 px edge in `card_border`. On Windows

@@ -2021,15 +2021,18 @@ impl CraftApp {
             return;
         }
         let t = theme::Tokens::get(ctx);
-        // In the middle of the title bar, the one place with nothing to press: at the bottom they
-        // sat on the prompt box's switches (the very controls just pressed), in a corner on a
-        // side panel, under the bar on a screen's tabs. One line fits inside the bar; a longer
-        // message grows down from it.
-        let width = (ctx.content_rect().width() - 2.0 * theme::space::LG).clamp(200.0, 520.0);
+        // Under the title bar, in the middle. Anywhere a message sits it is over something (at
+        // the bottom, the prompt box's switches just pressed; in a corner, a side panel; here, a
+        // screen's tabs), so the card lets clicks through to what is under it. Only its close
+        // button, drawn in a layer of its own, takes a click.
+        let width = (ctx.content_rect().width() - 2.0 * theme::space::LG).clamp(200.0, 420.0);
         let mut dismiss = None;
+        // Where each card keeps room for its close button.
+        let mut close_at = Vec::with_capacity(self.state.toasts.len());
         egui::Area::new(egui::Id::new("toasts"))
             .order(egui::Order::Foreground)
-            .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, theme::space::XS))
+            .anchor(egui::Align2::CENTER_TOP, egui::vec2(0.0, titlebar::HEIGHT + theme::space::SM))
+            .interactable(false)
             .fade_in(true)
             .show(ctx, |ui| {
                 ui.set_width(width);
@@ -2040,14 +2043,14 @@ impl CraftApp {
                 let side = theme::ControlSize::Small.height();
                 let line = theme::leading(theme::SMALL);
                 let nudge = ((side - line) / 2.0).max(0.0);
-                let inner = width - 2.0 * theme::space::SM - 2.0;
+                let inner = width - 2.0 * theme::space::MD - 2.0;
                 for (i, (text, error)) in self.state.toasts.iter().enumerate() {
                     egui::Frame::new()
                         .fill(t.field)
                         .stroke(egui::Stroke::new(1.0, t.card_border))
                         .corner_radius(t.r_lg())
                         .shadow(egui::Shadow { offset: [0, 8], blur: 24, spread: 0, color: t.shadow })
-                        .inner_margin(theme::pad::CHIP)
+                        .inner_margin(theme::pad::PANEL)
                         .show(ui, |ui| {
                             ui.set_width(inner);
                             ui.horizontal_top(|ui| {
@@ -2061,13 +2064,19 @@ impl CraftApp {
                                     ui.add(egui::Label::new(egui::RichText::new(text).size(theme::SMALL).line_height(Some(line)).color(t.text)).wrap());
                                     ui.add_space(nudge);
                                 });
-                                if icons::button(ui, "x", theme::ControlSize::Small, false, "Dismiss").clicked() {
-                                    dismiss = Some(i);
-                                }
+                                let (slot, _) = ui.allocate_exact_size(egui::Vec2::splat(side), egui::Sense::hover());
+                                close_at.push((i, slot));
                             });
                         });
                 }
             });
+        for (i, slot) in close_at {
+            egui::Area::new(egui::Id::new(("toast-close", i))).order(egui::Order::Tooltip).fixed_pos(slot.min).show(ctx, |ui| {
+                if icons::button(ui, "x", theme::ControlSize::Small, false, "Dismiss").clicked() {
+                    dismiss = Some(i);
+                }
+            });
+        }
         if let Some(i) = dismiss {
             self.state.toasts.remove(i);
             if i < self.toast_at.len() {
